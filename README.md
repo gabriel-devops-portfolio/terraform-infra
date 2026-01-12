@@ -27,37 +27,56 @@ Production-grade AWS multi-account infrastructure managed with Terraform, implem
 ## 🏗️ Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        AWS ORGANIZATION                              │
-│                      (Management Account)                            │
-│                 • Organization Management                            │
-│                 • Consolidated Billing                               │
-│                 • Service Control Policies                           │
-│                                                                       │
-│  ┌────────────────────┐              ┌────────────────────┐        │
-│  │   Security OU      │              │   Workloads OU     │        │
-│  │                    │              │                    │        │
-│  │  ┌──────────────┐  │              │  ┌──────────────┐ │        │
-│  │  │ Security Acct│  │              │  │ Workload Acct│ │        │
-│  │  │              │  │              │  │              │ │        │
-│  │  │ • CloudTrail │  │              │  │ • EKS Cluster│ │        │
-│  │  │ • GuardDuty  │  │              │  │ • RDS        │ │        │
-│  │  │ • SecurityHub│  │              │  │ • VPC (Spoke)│ │        │
-│  │  │ • Config     │  │              │  │ • TGW Attach │ │        │
-│  │  │ • Sec Lake   │  │              │  │ • S3 Backups │ │        │
-│  │  │ • OpenSearch │  │              │  │ • Workloads  │ │        │
-│  │  │ • TF State   │  │◄─────────────┤  │              │ │        │
-│  │  │ • Audit Logs │  │  Cross-      │  │              │ │        │
-│  │  └──────────────┘  │  Account     │  └──────────────┘ │        │
-│  │                    │  Roles       │                    │        │
-│  │  SCPs Applied:     │              │  SCPs Applied:     │        │
-│  │  • Deny Leave Org  │              │  • Deny Leave Org │        │
-│  │  • Encrypt Transit │              │  • Deny Root Acct │        │
-│  │                    │              │  • Require MFA    │        │
-│  │                    │              │  • Encrypt Transit│        │
-│  └────────────────────┘              └────────────────────┘        │
-│                                                                       │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           AWS ORGANIZATION                                   │
+│                         (Management Account)                                 │
+│                    • Organization Management                                 │
+│                    • Consolidated Billing                                    │
+│                    • Service Control Policies                                │
+│                                                                               │
+│  ┌─────────────────────┐              ┌──────────────────────┐             │
+│  │   Security OU       │              │   Workloads OU       │             │
+│  │                     │              │                      │             │
+│  │  ┌───────────────┐  │              │  ┌────────────────┐ │             │
+│  │  │ Security Acct │  │              │  │ Workload Acct  │ │             │
+│  │  │ 404068503087  │  │              │  │ 290793900072   │ │             │
+│  │  │               │  │              │  │                │ │             │
+│  │  │ • CloudTrail  │  │              │  │ ┌────────────┐ │ │             │
+│  │  │ • GuardDuty   │  │              │  │ │ Spoke VPC  │ │ │             │
+│  │  │ • SecurityHub │  │              │  │ │ 10.0.0.0/16│ │ │             │
+│  │  │ • Config      │  │              │  │ │            │ │ │             │
+│  │  │ • Sec Lake    │  │              │  │ │ • EKS      │ │ │             │
+│  │  │ • OpenSearch  │  │              │  │ │ • RDS      │ │ │             │
+│  │  │ • Athena      │  │              │  │ │ • Private  │ │ │             │
+│  │  │ • TF State    │  │◄────────────┤  │ │   Subnets  │ │ │             │
+│  │  │ • Audit Logs  │  │ Cross-       │  │ └─────┬──────┘ │ │             │
+│  │  └───────────────┘  │ Account      │  │       │        │ │             │
+│  │                     │ Roles        │  │       │        │ │             │
+│  │  SCPs Applied:      │              │  │ ┌─────▼──────┐ │ │             │
+│  │  • Deny Leave Org   │              │  │ │  Hub VPC   │ │ │             │
+│  │  • Encrypt Transit  │              │  │ │ (Egress)   │ │ │             │
+│  │                     │              │  │ │ 10.1.0.0/16│ │ │             │
+│  │                     │              │  │ │            │ │ │             │
+│  │                     │              │  │ │ • NAT GW   │ │ │             │
+│  │                     │              │  │ │ • IGW      │ │ │             │
+│  │                     │              │  │ │ • Firewall │ │ │             │
+│  │                     │              │  │ │ • ALB      │ │ │             │
+│  │                     │              │  │ └────────────┘ │ │             │
+│  │                     │              │  │       │        │ │             │
+│  │                     │              │  └───────┼────────┘ │             │
+│  │                     │              │          │          │             │
+│  │                     │              │  SCPs Applied:      │             │
+│  │                     │              │  • Deny Leave Org   │             │
+│  │                     │              │  • Deny Root Acct   │             │
+│  │                     │              │  • Require MFA      │             │
+│  │                     │              │  • Encrypt Transit  │             │
+│  └─────────────────────┘              └──────────┼──────────┘             │
+│                                                   │                         │
+└───────────────────────────────────────────────────┼─────────────────────────┘
+                                                    │
+                                          ┌─────────▼──────────┐
+                                          │     INTERNET       │
+                                          └────────────────────┘
 ```
 
 ---
@@ -286,25 +305,30 @@ All logs flow to the Security Account:
 - Kubernetes Version: 1.28
 - Node Groups: 2 managed node groups (3-10 nodes)
 - Instance Types: t3.medium, t3.large
-- Networking: Private subnets only
-- Add-ons: CoreDNS, kube-proxy, VPC-CNI, EBS CSI
+- Networking: Private subnets only (no direct internet access)
+- Add-ons: CoreDNS, kube-proxy, VPC-CNI, EBS CSI Driver
+- OIDC Provider: Enabled for IRSA (IAM Roles for Service Accounts)
 
 **Data Layer:**
 - RDS PostgreSQL (Multi-AZ)
-- S3 buckets with versioning
-- KMS encryption at rest
-- Automated backups
+- S3 buckets with versioning and encryption
+- KMS encryption at rest for all data
+- Automated daily backups with 7-day retention
 
-**GitOps with ArgoCD:**
-- Helm chart deployment
-- LoadBalancer service type
-- IRSA for AWS integration
-- Prometheus + Grafana monitoring
-- Fluent Bit logging to CloudWatch
+**Network Architecture:**
+- Private subnets for EKS nodes and RDS
+- Database subnets isolated from application layer
+- Transit Gateway attachment to Egress VPC (Hub)
+- All internet-bound traffic routed through centralized NAT Gateway
+- Network Firewall inspection for egress traffic (optional)
 
 ### Staging Environment
 
-Mirrors production with scaled-down resources for testing.
+Mirrors production architecture with scaled-down resources for testing:
+- Smaller EKS node groups (2-5 nodes)
+- Single-AZ RDS instance (db.t3.small)
+- Reduced storage and backup retention
+- Same security controls and network topology
 
 ---
 
