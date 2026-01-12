@@ -1,4 +1,16 @@
-# AWS Multi-Account Terraform Infrastructure
+# AWS Multi### Key Features
+
+- ✅ **Multi-Account AWS Organization** with hierarchical OUs (Security + Workloads)
+- 🔒 **Centralized Security Account** for logging, monitoring, and compliance
+- 🛡️ **Production-Grade SCPs** including root account protection (60+ exceptions)
+- 🔐 **Cross-Account IAM Roles** with least privilege access
+- 📦 **Remote State Management** with S3 + DynamoDB locking + KMS encryption
+- 🌐 **Hub-and-Spoke Network Architecture** with Transit Gateway
+- 🔍 **Security Lake** for OCSF-compliant security data aggregation
+- 📊 **OpenSearch** for log visualization and analysis
+- 🔎 **Amazon Athena** for SQL-based log analysis and compliance queries
+- ⚡ **AWS Config** for drift detection and compliance monitoring
+- 🚨 **SOC Alerting** with SNS/SQS for security incident responseraform Infrastructure
 
 [![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-623CE4?logo=terraform)](https://www.terraform.io/)
 [![AWS](https://img.shields.io/badge/AWS-Organization-FF9900?logo=amazon-aws)](https://aws.amazon.com/)
