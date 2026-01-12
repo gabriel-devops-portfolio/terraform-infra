@@ -57,9 +57,11 @@ resource "aws_kms_alias" "opensearch" {
 }
 
 ############################################
-# Security Group for OpenSearch
+# Security Group for OpenSearch (VPC only)
 ############################################
 resource "aws_security_group" "opensearch" {
+  count = var.vpc_id != null ? 1 : 0
+
   name        = "opensearch-security-logs"
   description = "Security group for OpenSearch domain"
   vpc_id      = var.vpc_id
@@ -173,9 +175,13 @@ resource "aws_opensearch_domain" "security_logs" {
     }
   }
 
-  vpc_options {
-    subnet_ids         = var.private_subnet_ids
-    security_group_ids = [aws_security_group.opensearch.id]
+  # Only deploy in VPC if private_subnet_ids is provided
+  dynamic "vpc_options" {
+    for_each = var.private_subnet_ids != null ? [1] : []
+    content {
+      subnet_ids         = var.private_subnet_ids
+      security_group_ids = [aws_security_group.opensearch[0].id]
+    }
   }
 
   access_policies = jsonencode({

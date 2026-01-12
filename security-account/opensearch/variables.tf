@@ -3,18 +3,21 @@
 ############################################
 
 variable "vpc_id" {
-  description = "VPC ID where OpenSearch will be deployed"
+  description = "VPC ID where OpenSearch will be deployed (optional - leave null for public access)"
   type        = string
+  default     = null
 }
 
 variable "vpc_cidr" {
-  description = "VPC CIDR block for security group rules"
+  description = "VPC CIDR block for security group rules (optional - only needed for VPC deployment)"
   type        = string
+  default     = null
 }
 
 variable "private_subnet_ids" {
-  description = "List of private subnet IDs for OpenSearch"
+  description = "List of private subnet IDs for OpenSearch (optional - leave null for public access)"
   type        = list(string)
+  default     = null
 }
 
 variable "opensearch_instance_type" {

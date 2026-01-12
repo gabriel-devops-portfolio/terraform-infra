@@ -5,7 +5,7 @@
 # Use plus addressing for testing: yourname+security@example.com, yourname+workload@example.com
 
 security_account_email = "frankgab46@gmail.com" # Replace with actual email
-workload_account_email = "uyogab07@gmail.com" # Replace with actual email
+workload_account_email = "uyogab07@gmail.com"   # Replace with actual email
 
 ############################
 # Common Tags

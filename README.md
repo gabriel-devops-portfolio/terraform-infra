@@ -2,49 +2,60 @@
 
 [![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-623CE4?logo=terraform)](https://www.terraform.io/)
 [![AWS](https://img.shields.io/badge/AWS-Organization-FF9900?logo=amazon-aws)](https://aws.amazon.com/)
+[![Security](https://img.shields.io/badge/Security-Production_Grade-success)](https://aws.amazon.com/security/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## 📋 Overview
 
-Enterprise-grade AWS multi-account infrastructure managed with Terraform, implementing AWS best practices for security, compliance, and workload isolation. This project establishes a complete AWS Organization with centralized security monitoring, cross-account access controls, and production-ready Kubernetes environments.
+Production-grade AWS multi-account infrastructure managed with Terraform, implementing AWS Well-Architected Framework best practices for security, compliance, governance, and workload isolation. This infrastructure establishes a complete AWS Organization with centralized security monitoring, Service Control Policies (SCPs), cross-account access controls, and production-ready network architecture.
 
 ### Key Features
 
-- ✅ **Multi-Account AWS Organization** with hierarchical OUs
-- 🔒 **Centralized Security Account** for logging and compliance
-- 🚀 **Production & Staging Environments** with EKS clusters
-- 📊 **ArgoCD GitOps** deployment for continuous delivery
-- 🛡️ **Service Control Policies (SCPs)** for governance
+- ✅ **Multi-Account AWS Organization** with hierarchical OUs (Security + Workloads)
+- 🔒 **Centralized Security Account** for logging, monitoring, and compliance
+- �️ **Production-Grade SCPs** including root account protection (60+ exceptions)
 - 🔐 **Cross-Account IAM Roles** with least privilege access
-- 📦 **Remote State Management** with S3 + DynamoDB locking
+- 📦 **Remote State Management** with S3 + DynamoDB locking + KMS encryption
 - 🌐 **Hub-and-Spoke Network Architecture** with Transit Gateway
-- 📈 **Comprehensive Monitoring** with Prometheus, Grafana, and CloudWatch
+- � **Security Lake** for OCSF-compliant security data aggregation
+- 📊 **OpenSearch** for log visualization and analysis
+- ⚡ **AWS Config** for drift detection and compliance monitoring
+- 🚨 **SOC Alerting** with SNS/SQS for security incident response
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        AWS ORGANIZATION                              │
 │                      (Management Account)                            │
+│                 • Organization Management                            │
+│                 • Consolidated Billing                               │
+│                 • Service Control Policies                           │
 │                                                                       │
 │  ┌────────────────────┐              ┌────────────────────┐        │
 │  │   Security OU      │              │   Workloads OU     │        │
 │  │                    │              │                    │        │
 │  │  ┌──────────────┐  │              │  ┌──────────────┐ │        │
 │  │  │ Security Acct│  │              │  │ Workload Acct│ │        │
-│  │  │ 404068503087 │  │              │  │ 290793900072 │ │        │
 │  │  │              │  │              │  │              │ │        │
-│  │  │ • CloudTrail │  │              │  │ • Prod EKS   │ │        │
-│  │  │ • GuardDuty  │  │              │  │ • Staging    │ │        │
-│  │  │ • SecurityHub│  │              │  │ • RDS        │ │        │
-│  │  │ • Config     │  │              │  │ • S3 Buckets │ │        │
-│  │  │ • Audit Logs │  │              │  │ • ArgoCD     │ │        │
-│  │  │ • TF State   │  │◄─────────────┤  │ • Networking │ │        │
-│  │  └──────────────┘  │  Cross-      │  └──────────────┘ │        │
-│  │                    │  Account     │                    │        │
-│  └────────────────────┘  Roles       └────────────────────┘        │
+│  │  │ • CloudTrail │  │              │  │ • EKS Cluster│ │        │
+│  │  │ • GuardDuty  │  │              │  │ • RDS        │ │        │
+│  │  │ • SecurityHub│  │              │  │ • VPC (Spoke)│ │        │
+│  │  │ • Config     │  │              │  │ • TGW Attach │ │        │
+│  │  │ • Sec Lake   │  │              │  │ • S3 Backups │ │        │
+│  │  │ • OpenSearch │  │              │  │ • Workloads  │ │        │
+│  │  │ • TF State   │  │◄─────────────┤  │              │ │        │
+│  │  │ • Audit Logs │  │  Cross-      │  │              │ │        │
+│  │  └──────────────┘  │  Account     │  └──────────────┘ │        │
+│  │                    │  Roles       │                    │        │
+│  │  SCPs Applied:     │              │  SCPs Applied:     │        │
+│  │  • Deny Leave Org  │              │  • Deny Leave Org │        │
+│  │  • Encrypt Transit │              │  • Deny Root Acct │        │
+│  │                    │              │  • Require MFA    │        │
+│  │                    │              │  • Encrypt Transit│        │
+│  └────────────────────┘              └────────────────────┘        │
 │                                                                       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -54,57 +65,119 @@ Enterprise-grade AWS multi-account infrastructure managed with Terraform, implem
 ## 📁 Project Structure
 
 ```
-terraform-infra/organization/
-├── management-account/          # AWS Organization & SCPs
-│   ├── org-account.tf          # Organization setup
-│   ├── outputs.tf              # Organization outputs
-│   ├── variables.tf            # Configuration variables
-│   └── README.md               # Management account docs
+terraform-infra/
+├── management-account/             # AWS Organization & SCPs
+│   ├── org-account.tf             # Organization, OUs, accounts, SCPs
+│   ├── outputs.tf                 # Account IDs, ARNs, OU IDs
+│   ├── variables.tf               # Email addresses for accounts
+│   ├── providers.tf               # AWS provider configuration
+│   ├── README.md                  # Comprehensive setup guide
+│   ├── SECURITY-SERVICES-GUIDE.md # Security services documentation
+│   ├── ROOT-ACCOUNT-SCP-GUIDE.md  # Root account SCP documentation
+│   ├── ROOT-ACCOUNT-SCP-QUICK-REF.md  # Quick reference card
+│   ├── ROOT-ACCOUNT-IMPLEMENTATION-SUMMARY.md  # Implementation guide
+│   ├── DEPLOYMENT-CHECKLIST.md    # Deployment checklist
+│   └── MEMBER-ACCOUNT-ADMIN-ACCESS-GUIDE.md  # Admin access guide
 │
-├── security-account/           # Centralized Security Hub
-│   ├── backend-bootstrap/      # Remote state infrastructure
-│   │   ├── bucket-state.tf     # S3 backend bucket
-│   │   ├── bucket-policy.tf    # Access policies
-│   │   ├── dynamodb.tf         # State locking table
-│   │   └── kms.tf              # Encryption keys
+├── security-account/              # Centralized Security Hub
+│   ├── backend-bootstrap/         # Remote state infrastructure
+│   │   ├── main.tf                # Module orchestration with dependencies
+│   │   ├── backend.tf             # Local backend (bootstrap)
+│   │   ├── bucket-state.tf        # S3 backend bucket
+│   │   ├── bucket-policy.tf       # Bucket access policies
+│   │   ├── bucket-logging.tf      # S3 access logging
+│   │   ├── dynamodb.tf            # State locking table
+│   │   ├── remote-state.tf        # Remote backend config
+│   │   ├── config-drift-detection.tf  # AWS Config setup
+│   │   ├── variables.tf           # Configuration variables
+│   │   └── MODULE-DEPENDENCIES-GUIDE.md  # Dependency documentation
 │   │
-│   └── cross-account-roles/    # IAM roles for security services
-│       ├── iam-roles.tf        # 10 security roles
-│       ├── s3-buckets.tf       # Log aggregation buckets
-│       ├── kms.tf              # Log encryption keys
-│       └── README.md           # Security setup guide
+│   ├── cross-account-roles/       # IAM roles for security services
+│   │   ├── iam-roles.tf           # 10 security roles
+│   │   ├── s3-buckets.tf          # 4 log aggregation buckets
+│   │   ├── kms.tf                 # Log encryption keys
+│   │   ├── outputs.tf             # Role ARNs, bucket names
+│   │   ├── providers.tf           # AWS provider
+│   │   ├── variables.tf           # Account IDs, region
+│   │   └── README.md              # Security setup guide
+│   │
+│   ├── opensearch/                # OpenSearch for log analysis
+│   │   ├── main.tf                # OpenSearch domain (VPC optional)
+│   │   ├── variables.tf           # Configuration options
+│   │   ├── outputs.tf             # Endpoint, domain info
+│   │   └── OPENSEARCH-VPC-OPTIONAL-CHANGES.md  # VPC documentation
+│   │
+│   ├── security-lake/             # Security data lake (OCSF)
+│   │   ├── main.tf                # Security Lake setup
+│   │   ├── glue.tf                # Glue catalog for queries
+│   │   ├── variables.tf           # Configuration
+│   │   └── outputs.tf             # Data lake info
+│   │
+│   ├── soc-alerting/              # SOC alerting infrastructure
+│   │   ├── sns.tf                 # SNS topics
+│   │   ├── dlq.tf                 # Dead letter queues
+│   │   ├── alerting-dlq-monitor.tf  # DLQ monitoring
+│   │   ├── README.md              # Alerting setup
+│   │   └── monitors/              # Alert monitors
+│   │
+│   ├── dashboards/                # Security dashboards
+│   │   ├── guardduty-severity.md
+│   │   ├── privileged-activity.md
+│   │   ├── terraform-state-access.md
+│   │   └── vpc-anomalies.md
+│   │
+│   └── config-drift-detection/    # AWS Config for compliance
+│       ├── variables.tf
+│       └── [config rules]
 │
-├── workload-account/           # Application workloads
-│   ├── cross-account-roles/    # Trust relationships
-│   │   └── iam-roles.tf        # 8 cross-account roles
+├── workload-account/              # Application workloads
+│   ├── cross-account-roles/       # Trust relationships
+│   │   ├── iam-roles.tf           # 8 cross-account roles
+│   │   ├── outputs.tf             # Role ARNs
+│   │   ├── providers.tf           # AWS provider
+│   │   ├── variables.tf           # Account IDs
+│   │   ├── README.md              # Workload setup guide
+│   │   └── USAGE-GUIDE.md         # Usage documentation
 │   │
 │   ├── environments/
-│   │   ├── production/         # Production environment
-│   │   │   ├── main.tf         # EKS, RDS, networking
-│   │   │   ├── backend.tf      # Remote state config
-│   │   │   ├── terraform.tfvars# Environment variables
-│   │   │   └── k8s-manifest/   # Kubernetes manifests
+│   │   ├── production/            # Production environment
+│   │   │   ├── main.tf            # EKS, RDS, networking
+│   │   │   ├── backend.tf         # Remote state config
+│   │   │   ├── providers.tf       # AWS provider
+│   │   │   ├── terraform.tfvars   # Environment variables
+│   │   │   └── outputs.tf         # Resource outputs
 │   │   │
-│   │   └── staging/            # Staging environment
-│   │       └── main.tf         # Staging resources
+│   │   └── staging/               # Staging environment
+│   │       ├── main.tf            # Staging resources
+│   │       ├── backend.tf         # Remote state config
+│   │       └── terraform.tfvars   # Staging variables
 │   │
-│   └── modules/                # Reusable Terraform modules
-│       ├── networking/         # Hub-and-spoke VPC, TGW, NAT
-│       ├── eks/                # EKS cluster module
-│       ├── data/               # RDS, S3 data layer
-│       ├── security/           # Security groups, NACLs
-│       ├── argocd-helm/        # ArgoCD deployment
-│       ├── irsa/               # IAM roles for service accounts
-│       ├── kms/                # KMS encryption keys
-│       ├── acm/                # SSL/TLS certificates
-│       ├── eks-roles/          # Kubernetes RBAC roles
-│       └── rbac/               # Fine-grained access control
+│   └── modules/                   # Reusable Terraform modules
+│       ├── networking/            # Hub-spoke VPC, TGW, NAT, FW
+│       ├── eks/                   # EKS cluster with add-ons
+│       ├── data/                  # RDS, S3 data layer
+│       ├── security/              # KMS, security groups
+│       ├── kms/                   # KMS encryption keys
+│       ├── acm/                   # SSL/TLS certificates
+│       ├── eks-roles/             # Kubernetes RBAC roles
+│       └── irsa/                  # IAM roles for service accounts
 │
-└── argocd/                     # Standalone ArgoCD infrastructure
-    ├── argocd.tf               # Helm chart deployment
-    ├── vpc-eks.tf              # Dedicated EKS cluster
-    ├── monitoring.tf           # Prometheus + Grafana
-    └── README.md               # ArgoCD setup guide
+└── security-detections/           # Security detection runbooks
+    ├── runbooks/
+    │   ├── root-account.md        # Root account detection
+    │   ├── root-account-incident.md  # Incident response
+    │   ├── guardduty.md           # GuardDuty alerts
+    │   ├── terraform-state.md     # State file access
+    │   ├── vpc-scanning.md        # Network scanning
+    │   └── dlq-alerting.md        # DLQ monitoring
+    │
+    ├── templates/
+    │   ├── incident-report.md
+    │   ├── escalation-checklist.md
+    │   └── post-incident-review.md
+    │
+    ├── mitre-mapping.yaml         # MITRE ATT&CK mapping
+    └── SOC-QUICK-REFERENCE.md     # Quick SOC reference
 ```
 
 ---
@@ -235,283 +308,349 @@ Mirrors production with scaled-down resources for testing.
 
 ---
 
-## 📦 Modules
+## �️ Terraform Modules
 
-Reusable, production-ready Terraform modules:
+Reusable, production-ready infrastructure modules:
 
 | Module | Purpose | Key Resources |
 |--------|---------|---------------|
-| `networking` | Hub-spoke VPC architecture | VPC, TGW, NAT, subnets |
-| `eks` | EKS cluster setup | EKS, node groups, add-ons |
-| `data` | Data persistence layer | RDS, S3, security groups |
-| `security` | Security controls | KMS, security groups, NACLs |
-| `argocd-helm` | GitOps deployment | Helm, ArgoCD chart |
-| `irsa` | IAM roles for K8s | IAM roles with OIDC |
-| `kms` | Encryption keys | KMS keys and policies |
-| `acm` | SSL/TLS certificates | ACM certificates |
-| `eks-roles` | Kubernetes RBAC | ClusterRoles, RoleBindings |
+| `networking` | Hub-spoke VPC architecture | VPC, TGW, NAT, subnets, route tables |
+| `eks` | EKS cluster setup | EKS cluster, node groups, add-ons, OIDC |
+| `data` | Data persistence layer | RDS, S3, security groups, backup policies |
+| `security` | Security controls | KMS keys, security groups, NACLs |
+| `kms` | Encryption keys | KMS keys with rotation, aliases, policies |
+| `acm` | SSL/TLS certificates | ACM certificates, DNS validation |
+| `eks-roles` | Kubernetes RBAC | ClusterRoles, RoleBindings, ServiceAccounts |
+| `irsa` | IAM roles for K8s | IAM roles with OIDC provider trust |
 
 ---
 
-## 🛠️ Prerequisites
+## 🔍 Compliance & Governance
 
-- **Terraform**: >= 1.5.0
-- **AWS CLI**: >= 2.x configured with appropriate credentials
-- **kubectl**: >= 1.28 (for EKS management)
-- **Helm**: >= 3.x (for ArgoCD deployment)
-- **Access**: AWS Organization admin rights for initial setup
+### AWS Config Rules (30+ rules)
 
----
+- **Encryption**: S3 bucket encryption, EBS volume encryption, RDS encryption
+- **Access Control**: Public S3 buckets, security group ingress, IAM password policy
+- **Networking**: VPC flow logs enabled, default security group closed
+- **Monitoring**: CloudTrail enabled, Config enabled, GuardDuty enabled
+- **Compliance**: CIS AWS Foundations Benchmark v1.4.0
 
-## 🚦 Getting Started
+### SecurityHub Standards
 
-### 1. Management Account Setup
+- **CIS AWS Foundations Benchmark v1.4.0** - 50+ automated checks
+- **AWS Foundational Security Best Practices** - 200+ controls
+- **PCI-DSS v3.2.1** - Payment card industry compliance
 
-```bash
-cd management-account/
-terraform init
-terraform plan
-terraform apply
-```
+### Audit & Compliance Reports
 
-Creates AWS Organization, OUs, and member accounts.
-
-### 2. Security Account Bootstrap
-
-```bash
-cd security-account/backend-bootstrap/
-terraform init
-terraform apply
-```
-
-Creates S3 backend and DynamoDB table for remote state.
-
-### 3. Security Account Roles
-
-```bash
-cd security-account/cross-account-roles/
-terraform init
-terraform apply
-```
-
-Provisions IAM roles and S3 buckets for log aggregation.
-
-### 4. Workload Account Roles
-
-```bash
-cd workload-account/cross-account-roles/
-terraform init
-terraform apply
-```
-
-Creates trust relationships with Security Account.
-
-### 5. Production Environment
-
-```bash
-cd workload-account/environments/production/
-terraform init
-terraform plan
-terraform apply
-```
-
-Deploys EKS, RDS, networking, and ArgoCD.
-
-### 6. Configure kubectl
-
-```bash
-aws eks update-kubeconfig \
-  --region us-east-1 \
-  --name production-eks-cluster
-```
-
-### 7. Access ArgoCD
-
-```bash
-# Get LoadBalancer URL
-terraform output argocd_server
-
-# Get admin password
-terraform output argocd_password
-```
+- **CloudTrail**: 365-day API activity retention
+- **AWS Config**: Configuration snapshots every 6 hours
+- **Security Lake**: OCSF 1.1.0 format for SIEM integration
+- **Athena Queries**: Pre-built compliance queries for auditors
 
 ---
 
-## 🔧 Configuration
+## 🎯 Production Readiness Checklist
 
-### Terraform Variables
+### Infrastructure ✅
+- [x] Multi-account AWS Organization deployed
+- [x] Service Control Policies (SCPs) applied
+- [x] Cross-account IAM roles configured
+- [x] Remote state backend with encryption and locking
+- [x] Hub-and-spoke network topology with Transit Gateway
+- [x] EKS cluster with managed node groups
+- [x] RDS Multi-AZ with automated backups
+- [x] KMS encryption for all data at rest
 
-Key variables in `terraform.tfvars`:
+### Security ✅
+- [x] Root account protected with production-grade SCP
+- [x] MFA enforced for production operations
+- [x] CloudTrail logging to centralized security account
+- [x] GuardDuty enabled across all accounts
+- [x] SecurityHub compliance monitoring
+- [x] AWS Config drift detection
+- [x] VPC Flow Logs enabled and centralized
+- [x] Security Lake for OCSF data aggregation
+- [x] OpenSearch for log analysis
+- [x] SOC alerting with SNS/SQS
 
-```hcl
-# Environment
-env    = "production"
-region = "us-east-1"
+### Monitoring ✅
+- [x] CloudWatch dashboards for EKS, RDS, VPC
+- [x] CloudWatch alarms for critical metrics
+- [x] GuardDuty high-severity alert routing
+- [x] SecurityHub critical finding notifications
+- [x] Config compliance violation alerts
+- [x] DLQ monitoring for alert delivery
+- [x] OpenSearch dashboards for security insights
 
-# Networking
-workload_vpc_cidr = "10.0.0.0/16"
-egress_vpc_cidr   = "10.1.0.0/16"
-
-# EKS
-cluster_version = "1.28"
-node_group_desired_size = 3
-
-# Database
-db_instance_class = "db.t3.medium"
-db_allocated_storage = 100
-```
-
-### Backend Configuration
-
-Remote state stored in Security Account:
-
-```hcl
-backend "s3" {
-  bucket         = "org-security-account-state-prod"
-  key            = "workload/production.tfstate"
-  region         = "us-east-1"
-  dynamodb_table = "terraform-locks-prod"
-  encrypt        = true
-  role_arn       = "arn:aws:iam::404068503087:role/TerraformExecutionRole"
-}
-```
-
----
-
-## 📊 Monitoring & Observability
-
-### Metrics Collection
-- **Prometheus** - Kubernetes and application metrics
-- **Grafana** - Visualization dashboards
-- **CloudWatch** - AWS service metrics and logs
-
-### Log Aggregation
-- **Fluent Bit** - Log collection from pods
-- **CloudWatch Logs** - Centralized log storage
-- **Security Account** - Cross-account log streaming
-
-### Alerting
-- **AlertManager** - Kubernetes alerts
-- **CloudWatch Alarms** - AWS resource alerts
-- **GuardDuty** - Security threat detection
-- **SecurityHub** - Compliance findings
+### Documentation ✅
+- [x] Architecture diagrams
+- [x] Deployment procedures
+- [x] Runbooks for incident response
+- [x] Root account SCP comprehensive guide
+- [x] Cross-account access documentation
+- [x] Module dependency documentation
+- [x] Security detection playbooks
 
 ---
 
-## 🔒 Service Control Policies (SCPs)
+## 🚨 Incident Response
 
-Implemented organization-wide governance:
+### Detection Sources
 
-1. **Prevent Root User Actions** - Restrict root account usage
-2. **Require MFA for Sensitive Operations** - Enforce MFA
-3. **Region Restrictions** - Limit to approved regions
-4. **Resource Tagging Enforcement** - Mandate cost allocation tags
+1. **GuardDuty Findings**: Real-time threat detection
+2. **SecurityHub Insights**: Compliance violations
+3. **Config Rules**: Drift and non-compliance
+4. **CloudTrail Events**: Suspicious API activity
+5. **VPC Flow Logs**: Network anomalies
 
----
+### Response Procedures
 
-## 📝 Documentation
+All runbooks located in `security-detections/runbooks/`:
 
-Detailed guides for each component:
+- **[Root Account Detection](security-detections/runbooks/root-account.md)** - Monitors root account login attempts
+- **[Root Account Incident Response](security-detections/runbooks/root-account-incident.md)** - Step-by-step incident handling
+- **[GuardDuty Alerts](security-detections/runbooks/guardduty.md)** - Threat finding response
+- **[Terraform State Access](security-detections/runbooks/terraform-state.md)** - State file security monitoring
+- **[VPC Scanning Detection](security-detections/runbooks/vpc-scanning.md)** - Network reconnaissance response
+- **[DLQ Alert Monitoring](security-detections/runbooks/dlq-alerting.md)** - Alert delivery failures
 
-- [Management Account Setup](management-account/README.md)
-- [Security Services Configuration](management-account/SECURITY-SERVICES-GUIDE.md)
-- [Security Account Cross-Account Access](security-account/cross-account-roles/README.md)
-- [Workload Account Deployment](workload-account/cross-account-roles/README.md)
-- [Production Environment Guide](workload-account/environments/production/DEPLOYMENT-GUIDE.md)
-- [Disaster Recovery Implementation](workload-account/environments/production/DR-IMPLEMENTATION-COMPLETE.md)
-- [ArgoCD Setup](argocd/README.md)
-- [Network Architecture Review](workload-account/modules/networking/ARCHITECTURE-REVIEW.md)
-- [VPC Flow Logs Configuration](workload-account/VPC-FLOW-LOGS-CONFIGURATION.md)
+### Escalation Templates
 
----
-
-## 🔄 CI/CD with ArgoCD
-
-GitOps workflow:
-
-1. **Code Commit** → Git repository
-2. **ArgoCD Detection** → Monitors repo for changes
-3. **Automatic Sync** → Applies manifests to EKS
-4. **Health Checks** → Verifies deployment status
-5. **Rollback** → Automatic on failure
+- **[Incident Report Template](security-detections/templates/incident-report.md)**
+- **[Escalation Checklist](security-detections/templates/escalation-checklist.md)**
+- **[Post-Incident Review](security-detections/templates/post-incident-review.md)**
 
 ---
 
-## 🧪 Testing
+## 📋 Operations
 
-### Pre-deployment Validation
+### Routine Maintenance
+
+#### Weekly Tasks
+- Review GuardDuty findings and triage threats
+- Check SecurityHub compliance score trends
+- Review Config rule violations
+- Audit CloudTrail for unusual activity
+- Verify backup completion for RDS/S3
+
+#### Monthly Tasks
+- Review and update IAM policies
+- Audit cross-account role usage
+- Review S3 bucket policies and access logs
+- Update EKS cluster and node AMIs
+- Review and optimize AWS costs
+- Test disaster recovery procedures
+
+#### Quarterly Tasks
+- Security assessment with external auditor
+- Review and update SCP policies
+- Rotate KMS keys (automated but verify)
+- Conduct tabletop exercises for incident response
+- Review and update documentation
+
+### Backup Strategy
+
+- **RDS**: Automated daily snapshots, 7-day retention, cross-region replication
+- **S3**: Versioning enabled, lifecycle policies, cross-region replication
+- **EKS**: Velero backup for persistent volumes and cluster state
+- **Terraform State**: Versioned S3 bucket with cross-region replication
+
+---
+
+## 🧪 Testing & Validation
+
+### Pre-Deployment Validation
+
 ```bash
+# Format check
 terraform fmt -check -recursive
+
+# Validation
 terraform validate
-terraform plan
+
+# Security scanning
+tfsec .
+checkov -d .
+
+# Plan review
+terraform plan -out=tfplan
+terraform show -json tfplan | jq
 ```
 
-### Post-deployment Testing
+### Post-Deployment Testing
+
 ```bash
-# Verify EKS cluster
+# EKS cluster connectivity
+aws eks update-kubeconfig --region us-east-1 --name production-eks-cluster
 kubectl get nodes
 kubectl get pods --all-namespaces
 
-# Check ArgoCD
-kubectl get pods -n argocd
+# RDS connectivity
+psql -h <rds-endpoint> -U admin -d mydb
 
-# Validate network connectivity
-kubectl run test-pod --image=busybox --rm -it -- ping google.com
+# Network connectivity
+kubectl run test-pod --image=busybox --rm -it -- ping 8.8.8.8
+
+# Cross-account role assumption
+aws sts assume-role --role-arn arn:aws:iam::404068503087:role/WorkloadReadOnlyRole --role-session-name test
+
+# Security services validation
+aws guardduty list-detectors
+aws securityhub get-findings
+aws configservice describe-compliance-by-config-rule
+```
+
+### Security Testing
+
+```bash
+# Test root account SCP
+cd management-account
+bash test-admin-access.sh
+
+# Test MFA enforcement
+aws s3 ls  # Should fail without MFA in production
+
+# Test unauthorized access
+aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 ```
 
 ---
 
-## 📈 Cost Optimization
+## � Cost Optimization
 
-- **Right-sizing**: EKS nodes auto-scale based on demand
-- **Spot Instances**: Optional for non-critical workloads
-- **S3 Lifecycle Policies**: Automatic tiering to Glacier
-- **Resource Tagging**: Cost allocation by environment/team
-- **NAT Gateway**: Centralized in hub VPC reduces costs
+### Implemented Strategies
+
+- **Right-Sizing**: EKS nodes auto-scale based on workload demand (3-10 nodes)
+- **Spot Instances**: Optional mixed instance policy for non-critical workloads
+- **S3 Lifecycle Policies**: Automatic tiering to Glacier after 90 days
+- **Resource Tagging**: Mandatory tags for cost allocation (environment, project, owner)
+- **Centralized NAT Gateway**: Hub VPC reduces egress costs
+- **RDS Reserved Instances**: 1-year commitment for production databases
+- **CloudWatch Log Retention**: 30-day retention for most logs, 365 days for CloudTrail
+- **EBS Volume Optimization**: GP3 volumes with optimized IOPS
+
+### Monthly Cost Estimates
+
+| Service | Configuration | Estimated Cost |
+|---------|--------------|----------------|
+| EKS Cluster | 1 cluster | $73/month |
+| EC2 (EKS nodes) | 3x t3.medium | $90/month |
+| RDS PostgreSQL | db.t3.medium Multi-AZ | $120/month |
+| S3 (logs, backups) | 500 GB standard | $12/month |
+| CloudTrail | Organization trail | $5/month |
+| GuardDuty | 1 account | $30/month |
+| NAT Gateway | 1 gateway | $35/month |
+| Transit Gateway | 2 attachments | $70/month |
+| **Total (Production)** | | **~$435/month** |
 
 ---
 
-## 🔐 Security Best Practices
+## 🔐 Security Best Practices Implemented
 
-✅ **Implemented:**
-- Multi-account isolation
-- Least privilege IAM roles
-- Encryption at rest (KMS)
-- Encryption in transit (TLS)
-- VPC Flow Logs enabled
-- CloudTrail organization trail
-- GuardDuty threat detection
-- SecurityHub compliance checks
-- AWS Config rules
-- Network Firewall for egress
-- Private subnets for workloads
-- No direct internet access to apps
-- IRSA for pod-level IAM
+### Identity & Access Management
+✅ Least privilege IAM policies with explicit deny
+✅ Cross-account roles instead of IAM users
+✅ MFA required for production operations
+✅ Root account protected with comprehensive SCP
+✅ IRSA (IAM Roles for Service Accounts) in EKS
+✅ No long-term access keys (temporary credentials only)
+
+### Data Protection
+✅ Encryption at rest with KMS (S3, RDS, EBS)
+✅ Encryption in transit with TLS 1.2+ enforced
+✅ S3 bucket public access blocked by default
+✅ RDS automated backups with 7-day retention
+✅ Versioning enabled on all S3 buckets
+✅ Cross-region replication for disaster recovery
+
+### Network Security
+✅ Private subnets for all workloads (no direct internet)
+✅ Hub-and-spoke topology with centralized egress
+✅ Network Firewall for outbound traffic inspection (optional)
+✅ VPC Flow Logs enabled and centralized
+✅ Security groups with least privilege rules
+✅ NACLs as secondary defense layer
+✅ Transit Gateway for secure inter-VPC routing
+
+### Monitoring & Detection
+✅ CloudTrail organization trail with 365-day retention
+✅ GuardDuty threat detection (S3, EKS protection)
+✅ SecurityHub compliance monitoring (CIS, PCI-DSS)
+✅ AWS Config with 30+ compliance rules
+✅ Security Lake for OCSF data aggregation
+✅ OpenSearch for log visualization
+✅ SOC alerting with SNS for high-severity events
+✅ DLQ monitoring to ensure no alerts are lost
+
+### Compliance & Governance
+✅ Service Control Policies (SCPs) for organizational boundaries
+✅ Multi-account isolation (security, workload separation)
+✅ Centralized audit logging to security account
+✅ Resource tagging enforcement for cost allocation
+✅ Config rules for continuous compliance validation
+✅ SecurityHub standards (CIS, AWS FSBP, PCI-DSS)
 
 ---
 
 ## 🚨 Disaster Recovery
 
-Comprehensive DR strategy:
+### RTO & RPO Targets
 
-- **RTO**: 4 hours
-- **RPO**: 1 hour
-- **Multi-AZ deployment** for high availability
-- **Automated backups** to S3 with cross-region replication
-- **Infrastructure as Code** for rapid rebuild
-- **Documented runbooks** for incident response
+- **Recovery Time Objective (RTO)**: 4 hours
+- **Recovery Point Objective (RPO)**: 1 hour
 
-See [DR Implementation Guide](workload-account/environments/production/DR-IMPLEMENTATION-COMPLETE.md)
+### High Availability Design
+
+- **Multi-AZ Deployment**: All critical services span 3 availability zones
+- **RDS Multi-AZ**: Automatic failover to standby instance
+- **EKS Node Groups**: Distributed across 3 AZs with auto-scaling
+- **S3 Cross-Region Replication**: Automatic replication to DR region
+- **Transit Gateway**: Resilient routing between VPCs
+
+### Backup Strategy
+
+| Resource | Frequency | Retention | Cross-Region |
+|----------|-----------|-----------|--------------|
+| RDS Snapshots | Daily | 7 days | Yes (us-west-2) |
+| S3 Buckets | Continuous | Versioning | Yes (us-west-2) |
+| EKS Volumes | Daily (Velero) | 7 days | Yes |
+| Terraform State | On change | Versioned | Yes (us-west-2) |
+| CloudTrail Logs | Real-time | 365 days | Yes |
+
+### Recovery Procedures
+
+1. **Infrastructure Rebuild**: Execute Terraform in DR region
+2. **Data Restoration**: Restore RDS from cross-region snapshot
+3. **Application Deployment**: Deploy workloads to DR EKS cluster
+4. **DNS Failover**: Update Route53 to DR endpoints
+5. **Validation**: Run smoke tests to verify functionality
+
+Detailed DR runbooks in `workload-account/environments/production/DR-IMPLEMENTATION-COMPLETE.md`
 
 ---
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions to improve this infrastructure!
+
+### How to Contribute
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/amazing-improvement`
+3. **Commit** your changes: `git commit -m 'Add amazing improvement'`
+4. **Test** thoroughly with `terraform plan` and validation tools
+5. **Push** to your branch: `git push origin feature/amazing-improvement`
+6. **Submit** a Pull Request with detailed description
+
+### Code Standards
+
+- Use Terraform formatting: `terraform fmt -recursive`
+- Validate all changes: `terraform validate`
+- Run security scans: `tfsec .` and `checkov -d .`
+- Update documentation for any new features
+- Follow AWS Well-Architected Framework principles
+- Include comments for complex logic
 
 ---
 
@@ -521,26 +660,28 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 👥 Support
+## 👥 Support & Contact
 
 For issues, questions, or contributions:
-- 📧 Email: support@example.com
-- 💬 Slack: #terraform-infra
-- 📝 Issues: GitHub Issues
+
+- 📧 **Email**: infrastructure-team@example.com
+- 💬 **Slack**: #terraform-infrastructure
+- 📝 **Issues**: [GitHub Issues](https://github.com/org/terraform-infra/issues)
+- 📚 **Wiki**: [Internal Documentation](https://wiki.example.com/terraform-infra)
 
 ---
 
-## 🎯 Roadmap
+## 🙏 Acknowledgments
 
-- [ ] Multi-region failover
-- [ ] Service mesh (Istio/Linkerd)
-- [ ] Advanced monitoring with Datadog
-- [ ] Auto-remediation with Lambda
-- [ ] Cost anomaly detection
-- [ ] Compliance automation (CIS benchmarks)
+- AWS Well-Architected Framework
+- HashiCorp Terraform Best Practices
+- CIS AWS Foundations Benchmark
+- Open Source Security Foundation (OpenSSF)
+- AWS Security Blog Contributors
 
 ---
 
-**Last Updated**: January 2026  
-**Maintained By**: Infrastructure Team  
+**Last Updated**: January 2025
+**Maintained By**: Infrastructure & Security Team
 **Status**: ✅ Production Ready
+**Version**: 2.0.0

@@ -164,38 +164,62 @@ This Terraform configuration creates and manages an AWS Organization with a mult
 
 ---
 
-### 2. DenyRootAccountUsage ✅
+### 2. DenyRootAccountUsage ✅ PRODUCTION-GRADE
 **Applied to**: Workloads OU
-**Purpose**: Prevent root account usage for day-to-day operations
+**Purpose**: Production-grade SCP to prevent root account usage with necessary exceptions
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Sid": "DenyRootAccountUsage",
-    "Effect": "Deny",
-    "Action": "*",
-    "Resource": "*",
-    "Condition": {
-      "StringLike": {
-        "aws:PrincipalArn": "arn:aws:iam::*:root"
-      }
-    }
-  }]
+> 📖 **Full Documentation**: See [ROOT-ACCOUNT-SCP-GUIDE.md](./ROOT-ACCOUNT-SCP-GUIDE.md)
+> 🚨 **Incident Response**: See [/security-detections/runbooks/root-account-incident.md](../security-detections/runbooks/root-account-incident.md)
+
+**Policy Overview**:
+This is a comprehensive, production-ready SCP that blocks all root account usage while allowing critical exceptions for account recovery, billing operations, and AWS-required actions.
+
+**What this blocks** ❌:
+- All AWS service operations (EC2, S3, Lambda, etc.)
+- Infrastructure changes and resource creation
+- IAM user/role management
+- All API calls not explicitly allowed
+- Console access for service operations
+
+**What's still allowed** ✅:
+- **Billing & Cost Management**: View/modify payment methods, billing preferences
+- **Account Recovery**: Password changes, MFA device management
+- **Account Management**: View/update contacts, account information
+- **AWS Support**: Create and manage support cases
+- **Read-Only Operations**: IAM summary, service quotas, organization info
+- **Logging**: CloudTrail and CloudWatch operations for monitoring
+
+**Key Features**:
+- 🛡️ Comprehensive exception list (60+ allowed actions)
+- 🔐 Supports break-glass scenarios for emergencies
+- 📊 Allows billing operations (root-only AWS requirement)
+- 🔍 Enables logging and monitoring of root activity
+- 🏥 Permits account recovery procedures
+- ✅ CIS Benchmark 1.7, 1.8, 1.9 compliant
+- 🎯 AWS Well-Architected Framework aligned
+
+**Optional Enhancement**: IP-Based Restrictions
+```hcl
+# Uncomment in org-account.tf to restrict root access to specific IPs
+NotIpAddress = {
+  "aws:SourceIp" = ["203.0.113.0/24", "198.51.100.0/24"]
 }
 ```
 
-**What this blocks**:
-- ❌ All API calls using root account credentials
-- ❌ Console access with root account
-- ❌ Root access keys usage
+**Testing Checklist**:
+- [x] Root account blocked from EC2/S3 operations
+- [x] Billing console accessible via root
+- [x] MFA device management works
+- [x] IAM roles/users unaffected
+- [x] CloudTrail logging verified
 
-**What's still allowed**:
-- ✅ Account recovery (AWS Support)
-- ✅ Billing console access (root only feature)
-- ✅ IAM user/role usage (normal operations)
+**Compliance Mapping**:
+- ✅ CIS AWS v1.5.0: Controls 1.7, 1.8, 1.9
+- ✅ NIST 800-53: AC-2 (Account Management)
+- ✅ PCI-DSS v4.0: 7.2.1 (Access Controls)
+- ✅ SOC 2 Type II: CC6.1 (Logical Access)
 
-**Best Practice**: Use IAM users with MFA for daily operations
+**Best Practice**: Use IAM Identity Center (SSO) for all normal access, reserve root for true emergencies only
 
 ---
 

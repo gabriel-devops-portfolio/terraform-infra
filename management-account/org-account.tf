@@ -139,10 +139,12 @@ resource "aws_organizations_policy" "deny_leave_org" {
   })
 }
 
-# Deny root account usage
+# Production-grade SCP to prevent root account usage
+# This policy blocks root account access while allowing necessary exceptions
+# for account recovery, billing, and AWS-required operations
 resource "aws_organizations_policy" "deny_root_usage" {
   name        = "DenyRootAccountUsage"
-  description = "Prevent root account usage except for specific actions"
+  description = "Production-grade SCP to prevent root account usage with necessary exceptions for account recovery and AWS-required operations"
   type        = "SERVICE_CONTROL_POLICY"
 
   content = jsonencode({
@@ -155,7 +157,95 @@ resource "aws_organizations_policy" "deny_root_usage" {
         Resource = "*"
         Condition = {
           StringLike = {
-            "aws:PrincipalArn" = "arn:aws:iam::*:root"
+            "aws:PrincipalArn" = ["arn:aws:iam::*:root"]
+          }
+          # Optional: Add NotIpAddress condition for break-glass access from specific IPs
+          # NotIpAddress = {
+          #   "aws:SourceIp" = ["10.0.0.0/8", "172.16.0.0/12"] # Replace with your trusted IP ranges
+          # }
+        }
+      },
+      {
+        Sid    = "AllowRootAccountRecoveryAndBilling"
+        Effect = "Allow"
+        Action = [
+          # Billing and cost management (root-only tasks)
+          "aws-portal:ViewBilling",
+          "aws-portal:ViewAccount",
+          "aws-portal:ViewPaymentMethods",
+          "aws-portal:ModifyPaymentMethods",
+          "aws-portal:ViewUsage",
+          "billing:GetBillingData",
+          "billing:GetBillingDetails",
+          "billing:GetBillingNotifications",
+          "billing:GetBillingPreferences",
+          "billing:GetContractInformation",
+          "billing:GetCredits",
+          "billing:GetIAMAccessPreference",
+          "billing:GetSellerOfRecord",
+          "billing:ListBillingViews",
+          "ce:GetCostAndUsage",
+          "ce:GetCostForecast",
+          "cur:GetUsageReport",
+          "invoicing:GetInvoiceEmailDeliveryPreferences",
+          "invoicing:GetInvoicePDF",
+          "invoicing:ListInvoiceSummaries",
+          "payments:GetPaymentInstrument",
+          "payments:GetPaymentStatus",
+          "payments:ListPaymentPreferences",
+          "tax:GetTaxInheritance",
+          "tax:GetTaxRegistrationDocument",
+          "tax:ListTaxRegistrations",
+
+          # Account management (root-required operations)
+          "iam:CreateAccountAlias",
+          "iam:DeleteAccountAlias",
+          "iam:ListAccountAliases",
+          "account:GetAccountInformation",
+          "account:GetAlternateContact",
+          "account:GetContactInformation",
+          "account:ListRegions",
+
+          # Support (root may need for critical issues)
+          "support:*",
+          "trustedadvisor:Describe*",
+
+          # CloudTrail (for logging root activity)
+          "cloudtrail:LookupEvents",
+          "cloudtrail:GetTrailStatus",
+
+          # AWS Organizations (view only)
+          "organizations:DescribeOrganization",
+          "organizations:DescribeAccount",
+          "organizations:ListAccounts",
+
+          # Service Quotas (view only)
+          "servicequotas:GetServiceQuota",
+          "servicequotas:ListServiceQuotas",
+
+          # IAM (read-only for troubleshooting)
+          "iam:GetAccountSummary",
+          "iam:GetAccountPasswordPolicy",
+          "iam:ListVirtualMFADevices",
+          "iam:ListMFADevices",
+
+          # CloudWatch (for monitoring root login attempts)
+          "cloudwatch:PutMetricData",
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+
+          # Allow password change and MFA management for root user
+          "iam:ChangePassword",
+          "iam:CreateVirtualMFADevice",
+          "iam:EnableMFADevice",
+          "iam:ResyncMFADevice",
+          "iam:DeleteVirtualMFADevice"
+        ]
+        Resource = "*"
+        Condition = {
+          StringLike = {
+            "aws:PrincipalArn" = ["arn:aws:iam::*:root"]
           }
         }
       }

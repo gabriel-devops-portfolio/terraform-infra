@@ -476,3 +476,147 @@ resource "aws_s3_bucket_lifecycle_configuration" "athena_results" {
     }
   }
 }
+
+############################################
+# S3 Bucket for -workload -Terraform State
+############################################
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "org-workload-terraform-state-prod"
+
+  tags = {
+    Name        = "workload-terraform-state-prod"
+    Environment = "prod"
+    Account     = "workload"
+    ManagedBy   = "terraform"
+  }
+}
+
+############################################
+# Versioning
+############################################
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+############################################
+# Server-Side Encryption
+############################################
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_logging" "terraform_state" {
+  bucket        = aws_s3_bucket.terraform_state.id
+  target_bucket = aws_s3_bucket.terraform_state_logs.id
+  target_prefix = "terraform-state/"
+}
+
+############################################
+# Block ALL Public Access
+############################################
+resource "aws_s3_bucket_public_access_block" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+############################################
+# Access Logs Bucket
+############################################
+resource "aws_s3_bucket" "terraform_state_logs" {
+  bucket = "workload-account-terraform-state-access-logs"
+
+  tags = {
+    Name        = "terraform-state-access-logs"
+    Environment = "prod"
+    Account     = "security"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "terraform_state_logs" {
+  bucket = aws_s3_bucket.terraform_state_logs.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_logs" {
+  bucket = aws_s3_bucket.terraform_state_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "terraform_state" {
+  statement {
+    sid = "AllowCurrentAccountAccess"
+
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+
+    resources = [
+      aws_s3_bucket.terraform_state.arn,
+      "${aws_s3_bucket.terraform_state.arn}/*"
+    ]
+  }
+
+  statement {
+    sid = "DenyInsecureTransport"
+
+    effect = "Deny"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions = ["s3:*"]
+
+    resources = [
+      aws_s3_bucket.terraform_state.arn,
+      "${aws_s3_bucket.terraform_state.arn}/*"
+    ]
+
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  policy = data.aws_iam_policy_document.terraform_state.json
+}
+
