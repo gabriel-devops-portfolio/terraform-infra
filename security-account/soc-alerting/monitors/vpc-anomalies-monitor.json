@@ -1,0 +1,51 @@
+{
+ "type": "monitor",
+ "name": "vpc-traffic-anomalies",
+ "enabled": true,
+ "schedule": {
+  "period": {
+   "interval": 5,
+   "unit": "MINUTES"
+  }
+ },
+ "inputs": [
+  {
+   "search": {
+    "indices": [
+     "securitylake-vpcflow-*"
+    ],
+    "query": {
+     "size": 0,
+     "query": {
+      "bool": {
+       "filter": [
+        {
+         "term": {
+          "action": "REJECT"
+         }
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ ],
+ "triggers": [
+  {
+   "name": "excessive-rejected-traffic",
+   "severity": "3",
+   "condition": {
+    "script": {
+     "source": "ctx.results[0].hits.total.value > 100"
+    }
+   },
+   "actions": [
+    {
+     "name": "notify-sns",
+     "destination_id": "dest-sns-medium-a2e9d5c1"
+    }
+   ]
+  }
+ ]
+}

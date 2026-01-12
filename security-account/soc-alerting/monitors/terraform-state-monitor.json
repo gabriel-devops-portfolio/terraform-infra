@@ -1,0 +1,42 @@
+{
+ "type": "monitor",
+ "name": "terraform-state-access",
+ "enabled": true,
+ "schedule": {
+  "period": {
+   "interval": 5,
+   "unit": "MINUTES"
+  }
+ },
+ "inputs": [
+  {
+   "search": {
+    "indices": [
+     "securitylake-cloudtrail-*"
+    ],
+    "query": {
+     "query_string": {
+      "query": "terraform.tfstate AND NOT TerraformBackendRole"
+     }
+    }
+   }
+  }
+ ],
+ "triggers": [
+  {
+   "name": "unauthorized-state-access",
+   "severity": "2",
+   "condition": {
+    "script": {
+     "source": "ctx.results[0].hits.total.value > 0"
+    }
+   },
+   "actions": [
+    {
+     "name": "notify-sns",
+     "destination_id": "dest-sns-high-4b8d1e6a"
+    }
+   ]
+  }
+ ]
+}

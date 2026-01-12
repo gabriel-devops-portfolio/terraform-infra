@@ -1,0 +1,97 @@
+version: "1.0"
+mitre_version: "v13"
+last_updated: "2026-01-12"
+
+detections:
+  - name: Root account usage
+    severity: critical
+    data_source: CloudTrail
+    estimated_investigation_time: "30-60 minutes"
+    mitre_technique:
+      id: T1078
+      name: Valid Accounts
+      tactic:
+        - Initial Access
+        - Persistence
+        - Privilege Escalation
+        - Defense Evasion
+      sub_technique: T1078.004 # Cloud Accounts
+    platform: AWS
+    confidence: high
+    compliance:
+      soc2: CC6.1
+      pci_dss: "7.1"
+      hipaa: 164.312(a)(1)
+      gdpr: Art. 32
+
+  - name: AssumedRole abuse
+    severity: high
+    data_source: CloudTrail
+    estimated_investigation_time: "45-90 minutes"
+    mitre_technique:
+      id: T1098
+      name: Account Manipulation
+      tactic:
+        - Persistence
+        - Privilege Escalation
+      sub_technique: T1098.003 # Additional Cloud Roles
+    platform: AWS
+    confidence: medium
+    compliance:
+      soc2: CC6.1
+      pci_dss: "7.2"
+      hipaa: 164.312(a)(2)
+      gdpr: Art. 32
+
+  - name: GuardDuty malware
+    severity: critical
+    data_source: GuardDuty
+    estimated_investigation_time: "30-90 minutes"
+    mitre_technique:
+      id: T1204
+      name: User Execution
+      tactic:
+        - Execution
+      sub_technique: T1204.003 # Malicious Image
+    platform: AWS
+    confidence: high
+    compliance:
+      soc2: CC7.2
+      pci_dss: "10.6"
+      hipaa: 164.312(b)
+      gdpr: Art. 32
+
+  - name: VPC scanning
+    severity: medium
+    data_source: VPC Flow Logs
+    estimated_investigation_time: "20-40 minutes"
+    mitre_technique:
+      id: T1046
+      name: Network Service Scanning
+      tactic:
+        - Discovery
+    platform: AWS
+    confidence: medium
+    compliance:
+      soc2: CC7.2
+      pci_dss: "11.4"
+      hipaa: 164.312(e)(1)
+      gdpr: Art. 32
+
+  - name: Terraform state access
+    severity: high
+    data_source: CloudTrail
+    estimated_investigation_time: "45-75 minutes"
+    mitre_technique:
+      id: T1552
+      name: Unsecured Credentials
+      tactic:
+        - Credential Access
+      sub_technique: T1552.001 # Credentials In Files
+    platform: AWS
+    confidence: high
+    compliance:
+      soc2: CC6.1
+      pci_dss: "8.2"
+      hipaa: 164.312(a)(2)
+      gdpr: Art. 32
