@@ -124,7 +124,7 @@ terraform-infra/
 │   │   └── MODULE-DEPENDENCIES-GUIDE.md  # Dependency documentation
 │   │
 │   ├── cross-account-roles/       # IAM roles for security services
-│   │   ├── iam-roles.tf           # 10 security roles
+│   │   ├── iam-roles.tf           # 10 security roles (including OpenSearch with Security Lake permissions)
 │   │   ├── s3-buckets.tf          # 4 log aggregation buckets
 │   │   ├── kms.tf                 # Log encryption keys
 │   │   ├── outputs.tf             # Role ARNs, bucket names
@@ -138,11 +138,14 @@ terraform-infra/
 │   │   ├── outputs.tf             # Endpoint, domain info
 │   │   └── OPENSEARCH-VPC-OPTIONAL-CHANGES.md  # VPC documentation
 │   │
-│   ├── security-lake/             # Security data lake (OCSF)
-│   │   ├── main.tf                # Security Lake setup
-│   │   ├── glue.tf                # Glue catalog for queries
-│   │   ├── variables.tf           # Configuration
-│   │   └── outputs.tf             # Data lake info
+│   ├── athena/                    # Athena OCSF queries
+│   │   └── main.tf                # 11 OCSF named queries + multi-source correlation
+│   │
+│   ├── security-lake/             # Security data lake (OCSF 1.1.0)
+│   │   ├── main.tf                # Security Lake + OpenSearch subscriber
+│   │   ├── glue.tf                # Glue catalog for OCSF queries
+│   │   ├── variables.tf           # Configuration (includes opensearch_role_arn)
+│   │   └── outputs.tf             # Data lake info + subscriber ARN
 │   │
 │   ├── soc-alerting/              # SOC alerting infrastructure
 │   │   ├── sns.tf                 # SNS topics
@@ -247,14 +250,21 @@ terraform-infra/
 7. **BackupRole** - AWS Backup operations
 8. **InspectorRole** - Vulnerability scanning
 
-### Centralized Logging
+### Centralized Logging & OCSF Analytics
 
-All logs flow to the Security Account:
+All logs flow to the Security Account in OCSF 1.1.0 format:
 
-- 📋 **CloudTrail Logs** (7-year retention)
-- 🌊 **VPC Flow Logs** (1-year retention)
-- 🛡️ **Security Lake** (OCSF format, 2-year retention)
+- 📋 **CloudTrail Logs** → OCSF API Activity (class_uid 3005) - 365-day retention
+- 🌊 **VPC Flow Logs** → OCSF Network Activity (class_uid 4001) - 365-day retention
+- 🛡️ **Security Hub Findings** → OCSF Security Finding (class_uid 2001) - Includes GuardDuty, Config, Inspector, Macie
+- 🌐 **Route 53 DNS** → OCSF DNS Activity (class_uid 4003) - 365-day retention
+- 📄 **Terraform State Access Logs** → Lambda → OCSF API Activity (3005) - Custom injection
 - 📊 **Athena Query Results** (90-day retention)
+
+**Unified Analytics:**
+- **OpenSearch**: Real-time OCSF dashboards, alerting, and visualization
+- **Athena**: SQL queries with multi-source correlation (11 pre-built OCSF queries)
+- **Security Lake Subscriber**: Grants OpenSearch direct S3 access to OCSF data (~$1/month)
 
 ---
 
@@ -363,6 +373,22 @@ Reusable, production-ready infrastructure modules:
 
 ## 🔍 Compliance & Governance
 
+### OCSF 1.1.0 Standardization
+
+All security data normalized to Open Cybersecurity Schema Framework (OCSF) format:
+
+**OCSF Classes:**
+- **4001**: Network Activity (VPC Flow Logs)
+- **3005**: API Activity (CloudTrail, Terraform State Logs)
+- **2001**: Security Finding (GuardDuty, Config, Inspector, Macie via Security Hub)
+- **4003**: DNS Activity (Route 53 Resolver Logs)
+
+**Benefits:**
+- ✅ Unified field names across all security tools (OpenSearch, Athena)
+- ✅ Multi-source correlation in single queries (VPC + CloudTrail + Security Hub)
+- ✅ Industry-standard schema for SIEM integration
+- ✅ Future-proof for new security tools and data sources
+
 ### AWS Config Rules (30+ rules)
 
 - **Encryption**: S3 bucket encryption, EBS volume encryption, RDS encryption
@@ -379,10 +405,16 @@ Reusable, production-ready infrastructure modules:
 
 ### Audit & Compliance Reports
 
-- **CloudTrail**: 365-day API activity retention
+- **CloudTrail**: 365-day API activity retention (OCSF class_uid 3005)
 - **AWS Config**: Configuration snapshots every 6 hours
-- **Security Lake**: OCSF 1.1.0 format for SIEM integration
-- **Athena Queries**: Pre-built compliance queries for auditors
+- **Security Lake**: OCSF 1.1.0 format for SIEM integration (365-day retention)
+- **Athena Queries**: 11 pre-built OCSF compliance queries for auditors
+  - VPC traffic anomalies (class_uid 4001)
+  - Terraform state access monitoring (class_uid 3005)
+  - Privileged activity tracking (class_uid 3005)
+  - Security findings analysis (class_uid 2001)
+  - Multi-source threat correlation (4001 + 3005 + 2001)
+- **OpenSearch Dashboards**: Real-time OCSF security insights with subscriber access
 
 ---
 
@@ -406,8 +438,11 @@ Reusable, production-ready infrastructure modules:
 - [x] SecurityHub compliance monitoring
 - [x] AWS Config drift detection
 - [x] VPC Flow Logs enabled and centralized
-- [x] Security Lake for OCSF data aggregation
-- [x] OpenSearch for log analysis
+- [x] Security Lake for OCSF data aggregation (365-day retention)
+- [x] Security Lake Subscriber for OpenSearch (OCSF S3 access)
+- [x] OpenSearch for real-time OCSF log analysis
+- [x] Athena for SQL-based OCSF queries (11 pre-built queries)
+- [x] Multi-source correlation queries (VPC + CloudTrail + Security Hub)
 - [x] SOC alerting with SNS/SQS
 
 ### Monitoring ✅
@@ -576,9 +611,17 @@ aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 | S3 (logs, backups) | 500 GB standard | $12/month |
 | CloudTrail | Organization trail | $5/month |
 | GuardDuty | 1 account | $30/month |
+| Security Lake | 1TB OCSF data + lifecycle | $25/month |
+| Security Lake Subscriber | OpenSearch access | $1/month |
+| OpenSearch | 3x r6g.xlarge nodes | $750/month |
+| OpenSearch EBS | 3x 200GB gp3 | $90/month |
+| Athena | ~100GB OCSF queries | $5/month |
+| Glue Crawler | 6 runs/day | $2/month |
 | NAT Gateway | 1 gateway | $35/month |
 | Transit Gateway | 2 attachments | $70/month |
-| **Total (Production)** | | **~$435/month** |
+| **Total (Production)** | | **~$1,308/month** |
+
+*Note: Security Lake + OpenSearch add ~$873/month for centralized OCSF analytics*
 
 ---
 
