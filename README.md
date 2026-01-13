@@ -85,7 +85,7 @@ Production-grade AWS multi-account infrastructure managed with Terraform, implem
 
 ```
 terraform-infra/
-├── management-account/             # AWS Organization & SCPs
+├── management-account/            # AWS Organization & SCPs
 │   ├── org-account.tf             # Organization, OUs, accounts, SCPs
 │   ├── outputs.tf                 # Account IDs, ARNs, OU IDs
 │   ├── variables.tf               # Email addresses for accounts

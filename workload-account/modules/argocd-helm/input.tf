@@ -15,7 +15,7 @@ variable "eks_cluster_ca_certificate" {
 variable "argocd_helm_release_version" {
   description = "Version of the ArgoCD Helm chart to deploy"
   type        = string
-  default     = "7.8.23"
+  default     = "9.3.1"
 }
 
 variable "enableLocalRedis" {
@@ -34,4 +34,10 @@ variable "argocd_helm_values" {
   description = "List of values in YAML format to pass to ArgoCD Helm chart"
   type        = list(string)
   default     = []
+}
+
+variable "enable_cluster_admin_rbac" {
+  description = "Grant ArgoCD service accounts cluster-admin permissions via ClusterRoleBinding"
+  type        = bool
+  default     = true
 }

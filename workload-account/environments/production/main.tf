@@ -69,7 +69,7 @@ module "data" {
   # Security Configuration
   eks_cluster_security_group_id = module.kubernetes.cluster_security_group_id
 
-  # KMS Configuration (optional)
+  # KMS Configuration
   kms_key_arn = module.kms.eks_kms_key_arn
 
   # RDS Configuration (optional overrides)
@@ -92,7 +92,7 @@ module "kms" {
 }
 
 ############################
-# Route53 and ACM (before EKS for certificates)
+# Route53 and ACM
 ############################
 resource "aws_route53_zone" "primary" {
   name = var.domain_name
@@ -100,48 +100,6 @@ resource "aws_route53_zone" "primary" {
   tags = merge(var.tags, {
     Name = "${var.env}-primary-zone"
   })
-}
-
-resource "aws_acm_certificate" "eks_cert" {
-  domain_name       = var.domain_name
-  validation_method = "DNS"
-
-  subject_alternative_names = [
-    "*.${var.domain_name}"
-  ]
-
-  tags = merge(var.tags, {
-    Name        = "${var.env}-eks-certificate"
-    Environment = var.env
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-# DNS validation records for ACM certificate
-resource "aws_route53_record" "eks_cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.eks_cert.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = aws_route53_zone.primary.zone_id
-}
-
-# Wait for certificate validation to complete
-resource "aws_acm_certificate_validation" "eks_cert" {
-  certificate_arn         = aws_acm_certificate.eks_cert.arn
-  validation_record_fqdns = [for record in aws_route53_record.eks_cert_validation : record.fqdn]
 }
 
 ############################
@@ -342,7 +300,7 @@ module "argocd" {
   argocd_helm_values = [
     templatefile("${path.module}/k8s-manifest/argocd-values.yaml", {
       dex_config_github_client_id = var.github_oauth_client_id
-      private_domain              = "argocd.${var.domain_name}"
+      private_domain              = "argocd-prod.app.pilotgab.com"
       enableLocalRedis            = true
       enable_admin_login          = true
       loggingLevel                = "info"
@@ -362,20 +320,6 @@ module "route53_pilotgab" {
   domain_name = "pilotgab.com"
 
   count = var.pilotgab_domain_enable ? 1 : 0
-}
-
-module "acm_pilotgab" {
-  source = "../../modules/acm"
-
-  zone_id                = try(module.route53_pilotgab[0].zone_id, "")
-  domain_name            = "pilotgab.com"
-  default_region         = var.region
-  cloudfront_certificate = false
-  validate_certificate   = true
-
-  count = var.pilotgab_domain_enable ? 1 : 0
-
-  depends_on = [module.route53_pilotgab]
 }
 
 ############################

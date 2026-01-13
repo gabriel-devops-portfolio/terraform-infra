@@ -1,0 +1,134 @@
+# Argo CD HA configuration values
+# Chart: argo-cd
+# Reference: https://github.com/argoproj/argo-helm/tree/main/charts/argo-cd
+
+# Global settings
+fullnameOverride: argocd
+nameOverride: argocd
+
+# Enable HA mode
+controller:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: argocd-application-controller
+
+server:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: argocd-server
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internal
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/group.name: argocd
+      alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    hosts:
+      - host: ${private_domain}
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts:
+          - ${private_domain}
+        secretName: argocd-tls
+
+repoServer:
+  replicas: 3
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: argocd-repo-server
+
+redis:
+  enabled: ${enableLocalRedis}
+  image:
+    tag: 7.2.4-alpine
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+notifications:
+  enabled: true
+
+applicationSet:
+  enabled: true
+  replicas: 2
+
+configs:
+  cm:
+    application.instanceLabelKey: argocd.argoproj.io/instance
+    exec.enabled: "false"
+    kustomize.buildOptions: "--load-restrictor LoadRestrictionsNone"
+    server.rbac.log.enforce.enable: "true"
+    admin.enabled: "${enable_admin_login}"
+    accounts.admin.enabled: "${enable_admin_login}"
+    oidc.config: |
+      name: GitHub
+      issuer: https://github.com
+      clientID: ${dex_config_github_client_id}
+      clientSecret: ${dex_config_github_client_secret}
+      requestedScopes: ["openid", "profile", "email"]
+      CLIClientID: argocd
+  params:
+    server.insecure: "false"
+    server.log.format: text
+    server.log.level: ${loggingLevel}
+
+serverMetrics:
+  enabled: true
+controllerMetrics:
+  enabled: true
+repoServerMetrics:
+  enabled: true
+
+rbac:
+  create: true
