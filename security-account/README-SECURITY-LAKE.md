@@ -1,5 +1,21 @@
 # AWS Security Lake with OpenSearch and Athena
 
+## ⚠️ **IMPORTANT: Deployment Method Updated**
+
+**This document describes the legacy per-module deployment method.**
+
+**✅ For current deployment, use the unified method:**
+```bash
+cd security-account/backend-bootstrap
+terraform apply
+```
+
+**This single command deploys Security Lake, OpenSearch, Athena, SNS, and all security infrastructure.**
+
+**See:** [UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md) for complete instructions.
+
+---
+
 ## Overview
 Centralized security data lake that ingests all security logs from workload accounts and provides:
 - **Real-time monitoring** with Amazon OpenSearch
@@ -50,7 +66,34 @@ Amazon OpenSearch cluster for:
 
 ## Quick Start
 
-### 1. Deploy Security Lake
+### ✅ **New Unified Deployment Method (Use This!)**
+
+**Step 1: Deploy All Security Infrastructure**
+
+```bash
+cd security-account/backend-bootstrap
+terraform init
+terraform apply
+```
+
+**This single command deploys:**
+- ✅ Security Lake (OCSF data lake, Glue, Athena)
+- ✅ OpenSearch (3-node cluster + SNS role)
+- ✅ Athena Queries (7 queries + 4 views)
+- ✅ SNS Topics (critical, high, medium)
+- ✅ Cross-Account Roles
+- ✅ Config Drift Detection
+
+**Deployment Time:** 15-20 minutes | **Resources:** 85+
+
+---
+
+### 📝 **Legacy Per-Module Deployment (Deprecated)**
+
+<details>
+<summary>Click to expand old deployment method (not recommended)</summary>
+
+**Old Step 1: Deploy Security Lake**
 
 ```bash
 cd security-lake
@@ -58,7 +101,7 @@ terraform init
 terraform apply
 ```
 
-### 2. Deploy OpenSearch
+**Old Step 2: Deploy OpenSearch**
 
 **Create `terraform.tfvars`:**
 ```hcl
@@ -73,9 +116,25 @@ terraform init
 terraform apply -var-file=terraform.tfvars
 ```
 
-### 3. Access Dashboards
+**⚠️ This method is deprecated. Use unified deployment instead.**
+
+</details>
+
+---
+
+### **Step 2: Post-Deployment Configuration**
+
+**A. Confirm SNS Email Subscriptions**
+```bash
+# Check email (captain.gab@protonmail.com) and confirm 3 subscriptions
+aws sns list-subscriptions | grep Confirmed
+```
+
+**B. Access OpenSearch Dashboards**
 
 ```bash
+cd security-account/backend-bootstrap
+
 # Get OpenSearch endpoint
 terraform output opensearch_dashboard_endpoint
 
@@ -86,7 +145,14 @@ aws secretsmanager get-secret-value \
   --output text
 ```
 
-### 4. Query with Athena
+**C. Run Glue Crawler**
+```bash
+aws glue start-crawler --name security-lake-crawler
+```
+
+---
+
+### **Step 3: Query with Athena**
 
 ```sql
 -- Show all security tables
@@ -100,26 +166,53 @@ WHERE time >= current_timestamp - interval '24' hour;
 
 ## Outputs
 
-### Security Lake Outputs
+### From Backend-Bootstrap Unified Deployment
+
+```bash
+cd security-account/backend-bootstrap
+terraform output
+```
+
+**Security Lake Outputs:**
 ```
 security_lake_s3_bucket = "aws-security-data-lake-us-east-1-404068503087"
 glue_database_name = "amazon_security_lake_glue_db_us_east_1"
+glue_crawler_name = "security-lake-crawler"
+athena_workgroup = "security-lake-queries"
 ```
 
-### OpenSearch Outputs
+**OpenSearch Outputs:**
 ```
 opensearch_endpoint = "https://search-security-logs-xxx.us-east-1.es.amazonaws.com"
 opensearch_dashboard_endpoint = "https://.../_dashboards"
+opensearch_sns_role_arn = "arn:aws:iam::404068503087:role/OpenSearchSNSRole"
+```
+
+**SNS Outputs:**
+```
+critical_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-critical"
+high_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-high"
+medium_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-medium"
 ```
 
 ## Cost Estimate
 
-| Component | Monthly Cost |
-|-----------|--------------|
-| Security Lake (1TB) | $25 |
-| OpenSearch (3 nodes) | $750 |
-| Athena (100GB queries) | $5 |
-| **Total** | **~$780/month** |
+| Component | Configuration | Monthly Cost |
+|-----------|--------------|--------------|
+| Security Lake (1TB) | Data storage + lifecycle | $25 |
+| OpenSearch (3 nodes) | r6g.xlarge.search x3 | $750 |
+| OpenSearch EBS | 200GB gp3 x3 | $90 |
+| Athena (100GB queries) | Pay per query | $5 |
+| SNS Topics | 3 topics + emails | $1 |
+| Glue Crawler | 6 runs/day | $2 |
+| Secrets Manager | Admin password | $0.40 |
+| **Total** | | **~$873/month** |
+
+**Cost Optimization Tips:**
+- Reduce OpenSearch to 1 node for dev/test (-66%)
+- Use OpenSearch warm storage for older data (-30%)
+- Optimize Athena queries with partition pruning
+- Adjust Security Lake retention (shorter = cheaper)
 
 ## Data Flow
 
@@ -175,19 +268,35 @@ ORDER BY call_count DESC;
 
 ## Next Steps
 
-1. ✅ Deploy Security Lake and OpenSearch
-2. ⏭️ Configure workload account VPC Flow Logs
-3. ⏭️ Create OpenSearch dashboards
-4. ⏭️ Set up alerting rules
-5. ⏭️ Configure automated responses
+1. ✅ **Deploy everything:** `cd security-account/backend-bootstrap && terraform apply`
+2. ✅ **Confirm SNS subscriptions** (check email for 3 confirmation links)
+3. ✅ **Run Glue Crawler** to catalog Security Lake data
+4. ⏳ **Create OpenSearch destinations** for alerting (manual UI step)
+5. ⏳ **Upload OpenSearch monitors:** `cd soc-alerting/monitors && ./deploy-monitors.sh`
+6. ⏳ **Configure workload account** VPC Flow Logs
+7. ⏳ **Create OpenSearch dashboards** for visualization
+8. ⏳ **Set up automated alerting** rules
+9. ⏳ **Configure automated incident responses**
 
 ## Documentation
 
-- **SECURITY-LAKE-DEPLOYMENT.md** - Step-by-step deployment guide
+### **Primary Guides (Start Here)** ⭐
+- **[UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md)** - Complete step-by-step deployment guide
+- **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** - One-page command reference
+- **[README.md](./README.md)** - Master documentation index
+
+### **Detailed References**
+- **[IMPLEMENTATION-COMPLETE.md](./IMPLEMENTATION-COMPLETE.md)** - What's deployed and how it works
+- **[OPENSEARCH-SNS-SETUP.md](./OPENSEARCH-SNS-SETUP.md)** - OpenSearch SNS integration
+- **[soc-alerting/MONITOR-STATUS-SUMMARY.md](./soc-alerting/MONITOR-STATUS-SUMMARY.md)** - Monitor deployment checklist
+
+### **Legacy Documentation** (Deprecated)
+- **SECURITY-LAKE-DEPLOYMENT.md** - Old per-module deployment guide
 - **SECURITY-LAKE-ARCHITECTURE.md** - Detailed architecture and design
 - **SECURITY-LAKE-QUICK-START.md** - Quick reference and code samples
 
 ---
 
 **Status:** ✅ Ready for Production
-**Last Updated:** January 12, 2026
+**Deployment Method:** ✅ Unified (single command from backend-bootstrap/)
+**Last Updated:** January 13, 2026

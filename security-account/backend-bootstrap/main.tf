@@ -27,7 +27,23 @@ module "opensearch" {
 module "security-lake" {
   source = "../security-lake"
 
+  opensearch_role_arn = module.cross-account-role.opensearch_role_arn
+
   depends_on = [module.cross-account-role]
+}
+
+############################################
+# Athena Queries Module
+# Depends on: security-lake (for Glue database and Athena workgroup)
+############################################
+module "athena" {
+  source = "../athena"
+
+  region              = var.region
+  security_account_id = var.security_account_id
+  workload_account_id = var.workload_account_id
+
+  depends_on = [module.security-lake]
 }
 
 ############################################
@@ -51,4 +67,22 @@ module "config-drift-detection" {
   config_bucket_name = module.cross-account-role.cloudtrail_logs_bucket_name
 
   depends_on = [module.cross-account-role]
+}
+
+############################################
+# Security Lake Custom Sources Module
+# Depends on: security-lake (for data lake), cross-account-role (for S3 buckets and KMS)
+# Purpose: Transform VPC Flow Logs and Terraform State access logs to OCSF format
+############################################
+module "security-lake-custom-sources" {
+  source = "../security-lake-custom-sources"
+
+  kms_key_arn   = module.cross-account-role.kms_key_arn
+  sns_topic_arn = module.soc-alerting.high_topic_arn
+
+  depends_on = [
+    module.security-lake,
+    module.cross-account-role,
+    module.soc-alerting
+  ]
 }

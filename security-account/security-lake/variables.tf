@@ -25,3 +25,8 @@ variable "transition_days" {
   type        = number
   default     = 30
 }
+
+variable "opensearch_role_arn" {
+  description = "ARN of the OpenSearch IAM role for Security Lake subscriber access"
+  type        = string
+}

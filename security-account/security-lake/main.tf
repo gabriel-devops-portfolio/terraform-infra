@@ -3,15 +3,6 @@
 # Purpose: Centralized security data lake for all accounts
 ############################################
 
-terraform {
-  required_version = ">= 1.5.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
 
 ############################################
 # Data Sources
@@ -146,4 +137,60 @@ resource "aws_securitylake_aws_log_source" "route53_resolver" {
   }
 
   depends_on = [aws_securitylake_data_lake.main]
+}
+
+############################################
+# Security Lake Subscriber - OpenSearch Integration
+# Purpose: Allow OpenSearch to query OCSF-normalized security data
+############################################
+resource "aws_securitylake_subscriber" "opensearch" {
+  subscriber_name = "opensearch-ocsf-subscriber"
+
+  access_type = "S3"
+
+  # Subscribe to all AWS log sources (VPC Flow, CloudTrail, Security Hub, Route 53)
+  source {
+    aws_log_source_resource {
+      source_name    = "VPC_FLOW"
+      source_version = "2.0"
+    }
+  }
+
+  source {
+    aws_log_source_resource {
+      source_name    = "CLOUD_TRAIL_MGMT"
+      source_version = "2.0"
+    }
+  }
+
+  source {
+    aws_log_source_resource {
+      source_name    = "SH_FINDINGS"
+      source_version = "1.0"
+    }
+  }
+
+  source {
+    aws_log_source_resource {
+      source_name    = "ROUTE53"
+      source_version = "1.0"
+    }
+  }
+
+  subscriber_identity {
+    principal   = var.opensearch_role_arn
+    external_id = "opensearch-security-lake-${local.security_account_id}"
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "opensearch-ocsf-subscriber"
+    Purpose = "opensearch-security-lake-integration"
+  })
+
+  depends_on = [
+    aws_securitylake_aws_log_source.vpc_flow,
+    aws_securitylake_aws_log_source.cloudtrail_mgmt,
+    aws_securitylake_aws_log_source.security_hub,
+    aws_securitylake_aws_log_source.route53_resolver
+  ]
 }

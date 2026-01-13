@@ -53,6 +53,19 @@ output "opensearch_role_arn" {
 }
 
 ############################################
+# KMS Key Outputs
+############################################
+output "kms_key_arn" {
+  description = "ARN of the KMS key for security logs encryption"
+  value       = aws_kms_key.security_logs.arn
+}
+
+output "kms_key_id" {
+  description = "ID of the KMS key for security logs encryption"
+  value       = aws_kms_key.security_logs.id
+}
+
+############################################
 # S3 Bucket Outputs
 ############################################
 output "cloudtrail_logs_bucket_arn" {

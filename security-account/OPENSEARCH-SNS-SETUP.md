@@ -1,12 +1,26 @@
 # 🚀 OpenSearch SNS Alerting - Implementation Complete
 
+## ⚠️ **IMPORTANT: Deployment Method Updated**
+
+**This document describes the legacy per-module deployment method.**
+
+**✅ For current deployment, use the unified method:**
+```bash
+cd security-account/backend-bootstrap
+terraform apply
+```
+
+**This single command deploys OpenSearch, SNS topics, and all other security infrastructure.**
+
+**See:** [UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md) for complete instructions.
+
+---
+
 ## ✅ **IAM Role Created Successfully**
 
 The IAM role for OpenSearch to publish alerts to SNS has been implemented!
 
 ---
-
-## 📋 **What Was Added**
 
 ### **1. IAM Role for OpenSearch → SNS** ✅
 
@@ -101,51 +115,76 @@ output "sns_topics" {
 
 ## 🚀 **Deployment Steps**
 
-### **Step 1: Deploy SNS Topics First**
+### ✅ **New Unified Deployment Method (Use This!)**
+
+**Step 1: Deploy All Security Infrastructure**
 
 ```bash
-cd /Users/CaptGab/CascadeProjects/terraform-infra/organization/terraform-infra/security-account/soc-alerting
+cd security-account/backend-bootstrap
 
 terraform init
-terraform plan
 terraform apply
 ```
 
-**Expected Output:**
-```
-Apply complete! Resources: 6 added, 0 changed, 0 destroyed.
-
-Outputs:
-
-critical_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-critical"
-high_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-high"
-medium_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-medium"
-```
-
-**⚠️ IMPORTANT:** Check your email (captain.gab@protonmail.com) and **confirm all 3 subscriptions**!
-
----
-
-### **Step 2: Deploy OpenSearch with SNS Role**
-
-```bash
-cd /Users/CaptGab/CascadeProjects/terraform-infra/organization/terraform-infra/security-account/opensearch
-
-terraform init
-terraform plan
-terraform apply
-```
+**This single command deploys:**
+- ✅ Cross-Account Roles (S3, IAM, KMS)
+- ✅ Security Lake (OCSF data lake, Glue, Athena)
+- ✅ Athena Queries (7 queries + 4 views)
+- ✅ OpenSearch (domain + SNS IAM role)
+- ✅ SNS Topics (critical, high, medium)
+- ✅ DLQ Monitoring
+- ✅ Config Drift Detection
 
 **Expected Output:**
 ```
-Apply complete! Resources: X added, 0 changed, 0 destroyed.
+Apply complete! Resources: 85+ added, 0 changed, 0 destroyed.
 
 Outputs:
 
 opensearch_endpoint = "https://search-security-logs-xxxxx.us-east-1.es.amazonaws.com"
 opensearch_dashboard_endpoint = "https://search-security-logs-xxxxx.us-east-1.es.amazonaws.com/_dashboards"
 opensearch_sns_role_arn = "arn:aws:iam::404068503087:role/OpenSearchSNSRole"
-opensearch_sns_role_name = "OpenSearchSNSRole"
+critical_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-critical"
+high_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-high"
+medium_topic_arn = "arn:aws:sns:us-east-1:404068503087:soc-alerts-medium"
+```
+
+**⚠️ IMPORTANT:** Check your email (captain.gab@protonmail.com) and **confirm all 3 SNS subscriptions**!
+
+---
+
+### 📝 **Legacy Per-Module Deployment (Deprecated)**
+
+<details>
+<summary>Click to expand old deployment method (not recommended)</summary>
+
+**Old Step 1: Deploy SNS Topics First**
+
+```bash
+cd security-account/soc-alerting
+terraform init
+terraform apply
+```
+
+**Old Step 2: Deploy OpenSearch**
+
+```bash
+cd security-account/opensearch
+terraform init
+terraform apply
+```
+
+**⚠️ This method is deprecated. Use unified deployment instead.**
+
+</details>
+
+---
+
+### **Step 2: Get Deployment Outputs**
+
+```bash
+cd security-account/backend-bootstrap
+terraform output
 ```
 
 **📝 Copy these values - you'll need them next!**
@@ -158,6 +197,7 @@ opensearch_sns_role_name = "OpenSearchSNSRole"
 
 1. **Get the dashboard URL:**
    ```bash
+   cd security-account/backend-bootstrap
    terraform output opensearch_dashboard_endpoint
    ```
 
@@ -287,11 +327,20 @@ Update your monitor files with the **actual Destination IDs** you copied:
 
 ### **Step 6: Upload Monitors to OpenSearch**
 
+**Option A: Automated Script (Recommended)**
+
 ```bash
-cd /Users/CaptGab/CascadeProjects/terraform-infra/organization/terraform-infra/security-account/soc-alerting/monitors
+cd security-account/soc-alerting/monitors
+./deploy-monitors.sh
+```
+
+**Option B: Manual Upload**
+
+```bash
+cd security-account/soc-alerting/monitors
 
 # Get OpenSearch endpoint
-OPENSEARCH_ENDPOINT=$(cd ../../opensearch && terraform output -raw opensearch_endpoint | sed 's|https://||')
+OPENSEARCH_ENDPOINT=$(cd ../../backend-bootstrap && terraform output -raw opensearch_endpoint | sed 's|https://||')
 
 # Get admin password
 OPENSEARCH_PASSWORD=$(aws secretsmanager get-secret-value \
@@ -490,12 +539,11 @@ aws guardduty create-sample-findings \
 ### **Key ARNs (From Terraform Output)**
 
 ```bash
-# Get all needed values
-cd opensearch
+# Get all needed values from unified deployment
+cd security-account/backend-bootstrap
+
 terraform output opensearch_sns_role_arn
 terraform output opensearch_endpoint
-
-cd ../soc-alerting
 terraform output critical_topic_arn
 terraform output high_topic_arn
 terraform output medium_topic_arn
@@ -516,12 +564,11 @@ terraform output medium_topic_arn
 - [x] **IAM role created** - `OpenSearchSNSRole`
 - [x] **IAM policy attached** - SNS publish permissions
 - [x] **Outputs added** - Easy reference for ARNs
-- [ ] **SNS topics deployed** - Run `terraform apply` in soc-alerting/
+- [ ] **All infrastructure deployed** - Run `terraform apply` in backend-bootstrap/
 - [ ] **Email subscriptions confirmed** - Check email and click links
-- [ ] **OpenSearch deployed** - Run `terraform apply` in opensearch/
 - [ ] **SNS destinations created** - Manual step in OpenSearch UI
 - [ ] **Destination IDs updated** - Update monitor JSON files
-- [ ] **Monitors uploaded** - Upload 4 monitors via curl
+- [ ] **Monitors uploaded** - Run `./deploy-monitors.sh` script
 - [ ] **Monitors enabled** - Verify in OpenSearch UI
 - [ ] **Test alert sent** - Receive email successfully
 
@@ -529,14 +576,22 @@ terraform output medium_topic_arn
 
 ## 🎯 **Next Steps**
 
-1. ✅ Deploy SNS topics: `cd soc-alerting && terraform apply`
-2. ✅ Confirm email subscriptions (check inbox)
-3. ✅ Deploy OpenSearch: `cd opensearch && terraform apply`
-4. ⏳ Create SNS destinations in OpenSearch UI
-5. ⏳ Update monitor JSON files with destination IDs
-6. ⏳ Upload monitors to OpenSearch
-7. ⏳ Test alert flow end-to-end
-8. ⏳ Create dashboards for visualization
+1. ✅ **Deploy everything:** `cd security-account/backend-bootstrap && terraform apply`
+2. ✅ **Confirm email subscriptions** (check inbox for 3 confirmation emails)
+3. ⏳ **Create SNS destinations** in OpenSearch Dashboards UI
+4. ⏳ **Update monitor JSON files** with destination IDs
+5. ⏳ **Upload monitors:** `cd soc-alerting/monitors && ./deploy-monitors.sh`
+6. ⏳ **Test alert flow** end-to-end
+7. ⏳ **Create dashboards** for visualization (optional)
+
+---
+
+## 📚 **Related Documentation**
+
+- **[UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md)** - Complete deployment guide ⭐
+- **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** - One-page quick reference
+- **[soc-alerting/MONITOR-STATUS-SUMMARY.md](./soc-alerting/MONITOR-STATUS-SUMMARY.md)** - Monitor deployment checklist
+- **[README.md](./README.md)** - Master documentation index
 
 ---
 

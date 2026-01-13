@@ -1,10 +1,9 @@
-variable "config_bucket_name" {
-  description = "Central S3 bucket for AWS Config logs (Security account)"
-  type        = string
-}
+############################################
+# Variables for Athena Configuration
+############################################
 
 variable "region" {
-  description = "AWS region"
+  description = "AWS region for Athena queries"
   type        = string
   default     = "us-east-1"
 }

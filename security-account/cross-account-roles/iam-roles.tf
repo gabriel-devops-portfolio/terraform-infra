@@ -8,6 +8,8 @@
 ############################################
 data "aws_caller_identity" "current" {}
 
+data "aws_region" "current" {}
+
 data "aws_organizations_organization" "org" {}
 
 ############################################
@@ -18,6 +20,7 @@ locals {
   security_account_id   = data.aws_caller_identity.current.account_id
   workload_account_id   = var.workload_account_id
   management_account_id = data.aws_organizations_organization.org.master_account_id
+  region                = data.aws_region.current.name
 
   common_tags = {
     ManagedBy   = "terraform"
@@ -521,7 +524,7 @@ resource "aws_iam_role" "opensearch" {
   })
 }
 
-# OpenSearch Policy
+# OpenSearch Policy - Security Lake Access
 resource "aws_iam_role_policy" "opensearch" {
   name = "OpenSearchSecurityPolicy"
   role = aws_iam_role.opensearch.id
@@ -530,12 +533,44 @@ resource "aws_iam_role_policy" "opensearch" {
     Version = "2012-10-17"
     Statement = [
       {
+        Sid    = "SecurityLakeS3ReadAccess"
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          "arn:aws:s3:::aws-security-data-lake-${local.region}-${local.security_account_id}",
+          "arn:aws:s3:::aws-security-data-lake-${local.region}-${local.security_account_id}/*"
+        ]
+      },
+      {
+        Sid    = "LegacyVPCFlowLogsAccess"
         Effect = "Allow"
         Action = [
           "s3:GetObject",
           "s3:ListBucket"
         ]
-        Resource = "*"
+        Resource = [
+          aws_s3_bucket.vpc_flow_logs.arn,
+          "${aws_s3_bucket.vpc_flow_logs.arn}/*"
+        ]
+      },
+      {
+        Sid    = "GlueMetadataAccess"
+        Effect = "Allow"
+        Action = [
+          "glue:GetDatabase",
+          "glue:GetTable",
+          "glue:GetPartitions",
+          "glue:GetTableVersions"
+        ]
+        Resource = [
+          "arn:aws:glue:${local.region}:${local.security_account_id}:catalog",
+          "arn:aws:glue:${local.region}:${local.security_account_id}:database/*",
+          "arn:aws:glue:${local.region}:${local.security_account_id}:table/*/*"
+        ]
       }
     ]
   })

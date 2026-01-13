@@ -6,13 +6,24 @@
 
 ## 📋 **Executive Summary**
 
-Your SOC alerting and dashboard configuration is **correctly structured** and follows enterprise security monitoring best practices. All components are properly configured to work with Security Lake data.
+The SOC alerting and dashboard configuration is **correctly structured** and follows enterprise security monitoring best practices. All components are properly configured to work with Security Lake data.
 
 ### **What's Been Validated:**
 ✅ OpenSearch monitor configurations
 ✅ SNS topic routing by severity
 ✅ Alert detection logic (queries)
-✅ Dashboard structure and visualizations
+✅ Dashboard s2. **✅ Confirm Email Subscriptions**
+   - Check em4. **⚠️ Create SNS Destinations in OpenSearch**
+   - Open OpenSearch Dashboards
+   - Go to: **Alerting → Destinations → Create destination**
+   - Create 3 destinations (Critical, High, Medium) as shown above
+   - **IMPORTANT:** Copy the generated destination IDs
+   - Update monitor JSON files with actual destination IDs
+
+5. **⚠️ Upload Monitors to OpenSearch**tain.gab@protonmail.com
+   - Click confirmation links for all 3 SNS topics
+
+3. **⚠️ Create IAM Role for OpenSearch → SNS**ure and visualizations
 ✅ DLQ monitoring for alert reliability
 ✅ Integration with Security Lake indices
 
@@ -473,25 +484,26 @@ Metric: Count
 
 ### **Immediate (Before Monitors Work):**
 
-1. **✅ Deploy OpenSearch** (if not already done)
+1. **✅ Deploy All Security Infrastructure** (Single Command)
    ```bash
-   cd security-account/opensearch
+   cd security-account/backend-bootstrap
    terraform init
    terraform apply
    ```
 
-2. **✅ Deploy SNS Topics**
-   ```bash
-   cd security-account/soc-alerting
-   terraform init
-   terraform apply
-   ```
+   **This deploys ALL components in correct order:**
+   - Cross-Account Roles (S3, IAM, KMS, CloudTrail)
+   - Security Lake (Glue database, Athena workgroup)
+   - Athena Queries (7 named queries + 4 views)
+   - OpenSearch (domain, SNS role, admin password)
+   - SOC Alerting (SNS topics, DLQ, monitoring)
+   - Config Drift Detection
 
-3. **✅ Confirm Email Subscriptions**
+2. **✅ Confirm Email Subscriptions**
    - Check email: captain.gab@protonmail.com
    - Click confirmation links for all 3 SNS topics
 
-4. **⚠️ Create IAM Role for OpenSearch → SNS**
+3. **⚠️ Create IAM Role for OpenSearch → SNS**
    ```bash
    cd security-account/opensearch
    # Add to main.tf (if not exists):
@@ -533,14 +545,14 @@ Metric: Count
    }
    ```
 
-5. **⚠️ Create SNS Destinations in OpenSearch**
+4. **⚠️ Create SNS Destinations in OpenSearch**
    - Open OpenSearch Dashboards
    - Go to: **Alerting → Destinations → Create destination**
    - Create 3 destinations (Critical, High, Medium) as shown above
    - **IMPORTANT:** Copy the generated destination IDs
    - Update monitor JSON files with actual destination IDs
 
-6. **⚠️ Upload Monitors to OpenSearch**
+5. **⚠️ Upload Monitors to OpenSearch**
    ```bash
    # For each monitor file:
    curl -X POST "https://<opensearch-endpoint>/_plugins/_alerting/monitors" \
@@ -558,12 +570,23 @@ Metric: Count
 
 ### **Post-Deployment (Dashboard Creation):**
 
-7. **📊 Create Dashboards in OpenSearch**
+6. **📊 Create Dashboards in OpenSearch** (Optional)
    - Follow the visualization specs above
    - Use "Discover" to verify data exists first
    - Create visualizations one by one
    - Combine into dashboards
    - Save and share dashboard URLs
+
+---
+
+## 📚 **Updated Deployment Documentation**
+
+**⚠️ This document was written before the unified deployment approach.**
+
+For the current deployment method, see:
+- **[UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md)** - Complete single-command deployment guide
+- **[athena/DEPLOYMENT-GUIDE.md](./athena/DEPLOYMENT-GUIDE.md)** - Athena integration details
+- **[soc-alerting/MONITOR-STATUS-SUMMARY.md](./soc-alerting/MONITOR-STATUS-SUMMARY.md)** - Monitor deployment checklist
 
 ---
 
@@ -688,19 +711,26 @@ Your SOC setup is **production-ready** when:
 
 ## 📞 **Next Steps**
 
-1. **Deploy the infrastructure** (if not done):
+1. **Deploy the infrastructure** (single command):
    ```bash
-   cd security-account/opensearch && terraform apply
-   cd security-account/soc-alerting && terraform apply
+   cd security-account/backend-bootstrap && terraform apply
    ```
 
-2. **Configure OpenSearch destinations** (manual step in UI)
+   This deploys: Cross-Account Roles, Security Lake, Athena, OpenSearch, SOC Alerting, and Config Detection
 
-3. **Upload monitors** (curl commands above)
+2. **Confirm SNS email subscriptions** (check email and click confirmation links)
 
-4. **Create dashboards** (follow visualization specs)
+3. **Configure OpenSearch destinations** (manual step in OpenSearch Dashboards UI)
 
-5. **Test end-to-end** (trigger sample alerts)
+4. **Update monitor JSON files** with actual destination IDs
+
+5. **Upload monitors** (use `./deploy-monitors.sh` script or curl commands)
+
+6. **Create Athena views** (optional - run 4 view creation queries in Athena console)
+
+7. **Create dashboards** (optional - follow visualization specs)
+
+8. **Test end-to-end** (trigger sample alerts)
 
 ---
 

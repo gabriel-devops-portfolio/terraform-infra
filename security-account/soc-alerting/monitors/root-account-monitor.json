@@ -19,7 +19,7 @@
       "filter": [
        {
         "term": {
-         "user.identity.type": "Root"
+         "user_identity.type": "Root"
         }
        }
       ]

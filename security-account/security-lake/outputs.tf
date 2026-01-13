@@ -31,3 +31,13 @@ output "enabled_sources" {
     "ROUTE53"
   ]
 }
+
+output "opensearch_subscriber_id" {
+  description = "ID of the OpenSearch Security Lake subscriber"
+  value       = aws_securitylake_subscriber.opensearch.id
+}
+
+output "opensearch_subscriber_s3_path" {
+  description = "S3 path where OpenSearch can access OCSF data"
+  value       = "s3://aws-security-data-lake-${local.region}-${local.security_account_id}/ext/"
+}

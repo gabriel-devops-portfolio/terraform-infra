@@ -38,8 +38,8 @@ module "workload_vpc" {
   flow_log_destination_arn            = var.security_account_vpc_flow_logs_bucket_arn
   flow_log_max_aggregation_interval   = 60
   flow_log_per_hour_partition         = true
-  flow_log_file_format                = "parquet" # Optimized for Athena/OpenSearch
-  flow_log_hive_compatible_partitions = true      # Better for querying
+  flow_log_file_format                = "parquet"
+  flow_log_hive_compatible_partitions = true
 
   # Disable CloudWatch Logs (using S3 instead)
   create_flow_log_cloudwatch_log_group = false
