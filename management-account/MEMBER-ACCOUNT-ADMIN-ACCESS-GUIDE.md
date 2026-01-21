@@ -37,10 +37,12 @@ The Root Account SCP **ONLY** blocks the **root user** (root@email.com), not IAM
 ### Step-by-Step
 
 1. **Login to Management Account**
+
    - Go to AWS Console
    - Login with your management account credentials
 
 2. **Get Your Workload Account ID**
+
    ```bash
    cd /Users/CaptGab/terraform-infra/management-account
    terraform output workload_account_id
@@ -48,6 +50,7 @@ The Root Account SCP **ONLY** blocks the **root user** (root@email.com), not IAM
    ```
 
 3. **Switch Role in Console**
+
    - Click your account name (top-right corner)
    - Select **"Switch Role"**
    - Enter:
@@ -58,6 +61,7 @@ The Root Account SCP **ONLY** blocks the **root user** (root@email.com), not IAM
    - Click **"Switch Role"**
 
 4. **Verify You're in the Member Account**
+
    - Top-right should show: `Workload Admin @ 123456789012`
    - You now have **FULL ADMIN ACCESS**
 
@@ -94,6 +98,7 @@ aws sts assume-role \
 ### Step 2: Export Credentials
 
 **Manual Method:**
+
 ```bash
 # Copy from assume-role output
 export AWS_ACCESS_KEY_ID="ASIA..."
@@ -102,6 +107,7 @@ export AWS_SESSION_TOKEN="..."
 ```
 
 **Automated Method (Recommended):**
+
 ```bash
 # Create a helper script
 cat > ~/assume-workload-role.sh <<'EOF'
@@ -367,6 +373,7 @@ chmod +x test-admin-access.sh
 ```
 
 **Expected Output:**
+
 ```
 ✅ Test 1: Verify OrganizationAccountAccessRole exists
 ✅ SUCCESS: Can assume OrganizationAccountAccessRole
@@ -387,12 +394,12 @@ chmod +x test-admin-access.sh
 
 ## 📊 Permissions Summary
 
-| Access Method | Account | Permissions | Affected by Root SCP? |
-|---------------|---------|-------------|----------------------|
-| **Root User** | All | ❌ Blocked | ✅ YES - SCP blocks root |
-| **OrganizationAccountAccessRole** | Member | ✅ FULL ADMIN | ❌ NO - SCP doesn't affect IAM roles |
-| **IAM Users** | Member | ✅ Based on policies | ❌ NO - SCP doesn't affect IAM users |
-| **IAM Roles** | Member | ✅ Based on policies | ❌ NO - SCP doesn't affect IAM roles |
+| Access Method                     | Account | Permissions          | Affected by Root SCP?                |
+| --------------------------------- | ------- | -------------------- | ------------------------------------ |
+| **Root User**                     | All     | ❌ Blocked           | ✅ YES - SCP blocks root             |
+| **OrganizationAccountAccessRole** | Member  | ✅ FULL ADMIN        | ❌ NO - SCP doesn't affect IAM roles |
+| **IAM Users**                     | Member  | ✅ Based on policies | ❌ NO - SCP doesn't affect IAM users |
+| **IAM Roles**                     | Member  | ✅ Based on policies | ❌ NO - SCP doesn't affect IAM roles |
 
 ---
 
@@ -401,6 +408,7 @@ chmod +x test-admin-access.sh
 ### Issue 1: "Access Denied" When Assuming Role
 
 **Error:**
+
 ```
 An error occurred (AccessDenied) when calling the AssumeRole operation
 ```
@@ -408,6 +416,7 @@ An error occurred (AccessDenied) when calling the AssumeRole operation
 **Causes & Solutions:**
 
 1. **Not in Management Account**
+
    ```bash
    # Check current account
    aws sts get-caller-identity
@@ -416,6 +425,7 @@ An error occurred (AccessDenied) when calling the AssumeRole operation
    ```
 
 2. **Role Doesn't Exist Yet**
+
    ```bash
    # Deploy organization first
    cd management-account
@@ -433,6 +443,7 @@ An error occurred (AccessDenied) when calling the AssumeRole operation
 **Check:**
 
 1. **Verify you assumed the role correctly**
+
    ```bash
    aws sts get-caller-identity
 
@@ -442,6 +453,7 @@ An error occurred (AccessDenied) when calling the AssumeRole operation
    ```
 
 2. **Check SCP isn't blocking (shouldn't be)**
+
    ```bash
    # SCPs only block root user, not IAM roles
    # OrganizationAccountAccessRole should work

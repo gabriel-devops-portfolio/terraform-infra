@@ -124,3 +124,59 @@ output "workload_account_access_role_arn" {
   description = "ARN of the OrganizationAccountAccessRole in workload account"
   value       = "arn:aws:iam::${aws_organizations_account.workload.id}:role/OrganizationAccountAccessRole"
 }
+
+############################
+# AWS Backup Outputs
+############################
+
+output "backup_policy_note" {
+  description = "Instructions for enabling AWS Backup organization configuration"
+  value       = local.backup_policy_note
+}
+
+output "backup_setup_command" {
+  description = "Instructions for AWS Backup setup"
+  value       = local.backup_setup_command
+}
+
+############################
+# Compute Optimizer Outputs
+############################
+
+output "compute_optimizer_note" {
+  description = "Instructions for enabling Compute Optimizer"
+  value       = local.compute_optimizer_note
+}
+
+output "compute_optimizer_command" {
+  description = "Command to enable Compute Optimizer"
+  value       = local.compute_optimizer_command
+}
+
+############################
+# License Manager Outputs
+############################
+
+output "license_manager_note" {
+  description = "Instructions for enabling License Manager"
+  value       = local.license_manager_note
+}
+
+output "license_manager_command" {
+  description = "Command to enable License Manager service role"
+  value       = local.license_manager_command
+}
+
+############################
+# Tag Policy Outputs
+############################
+
+output "tag_policy_note" {
+  description = "Instructions for tag policy setup"
+  value       = local.tag_policy_note
+}
+
+output "tag_policy_command" {
+  description = "Instructions for tag policy creation"
+  value       = local.tag_policy_command
+}
