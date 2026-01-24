@@ -23,25 +23,41 @@ variable "private_subnet_ids" {
 variable "opensearch_instance_type" {
   description = "Instance type for OpenSearch data nodes"
   type        = string
-  default     = "r6g.xlarge.search"
+  # Production: r6g.xlarge.search (4 vCPU, 32 GB RAM) - ~$200-300/month per node
+  # default     = "r6g.xlarge.search"
+
+  # Development/Testing: Fast provisioning, lower cost (~$30-50/month)
+  default = "t3.small.search" # 2 vCPU, 2 GB RAM
 }
 
 variable "opensearch_instance_count" {
   description = "Number of OpenSearch data nodes"
   type        = number
-  default     = 3
+  # Production: 3 nodes for high availability
+  # default     = 3
+
+  # Development/Testing: Single node for faster provisioning
+  default = 1
 }
 
 variable "opensearch_master_type" {
   description = "Instance type for OpenSearch master nodes"
   type        = string
-  default     = "r6g.large.search"
+  # Production: r6g.large.search (2 vCPU, 16 GB RAM)
+  # default     = "r6g.large.search"
+
+  # Development/Testing: Not used with single node setup
+  default = "t3.small.search"
 }
 
 variable "ebs_volume_size" {
   description = "EBS volume size (GB) per OpenSearch node"
   type        = number
-  default     = 200
+  # Production: 200 GB per node
+  # default     = 200
+
+  # Development/Testing: Smaller volume for cost savings
+  default = 50
 }
 
 variable "enable_warm_storage" {

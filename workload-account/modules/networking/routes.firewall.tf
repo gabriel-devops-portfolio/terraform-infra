@@ -104,35 +104,12 @@ data "aws_networkfirewall_firewall" "this" {
 }
 
 locals {
+  # Map AZ directly to endpoint
   firewall_endpoints = {
     for state in data.aws_networkfirewall_firewall.this.firewall_status[0].sync_states :
     state.availability_zone => state.attachment[0].endpoint_id
   }
 }
 
-############################################
-# Firewall Subnet Route Table → NAT
-############################################
-resource "aws_route_table" "firewall" {
-  vpc_id = module.egress_vpc.vpc_id
-
-  tags = {
-    Name        = "${var.env}-firewall-rt"
-    Environment = var.env
-  }
-}
-
-resource "aws_route" "firewall_to_nat" {
-  for_each = module.egress_vpc.natgw_ids
-
-  route_table_id         = aws_route_table.firewall.id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = each.value
-}
-
-resource "aws_route_table_association" "firewall" {
-  for_each = var.firewall_subnets
-
-  subnet_id      = each.value
-  route_table_id = aws_route_table.firewall.id
-}
+# Note: Firewall subnets are defined as Private Subnets in the Egress VPC module.
+# Routes to NAT Gateway are automatically managed by the VPC module.

@@ -30,7 +30,7 @@ output "opensearch_admin_password_secret_arn" {
 
 output "opensearch_security_group_id" {
   description = "Security group ID for OpenSearch domain"
-  value       = aws_security_group.opensearch.id
+  value       = var.vpc_id != null ? aws_security_group.opensearch[0].id : null
 }
 
 output "kms_key_arn" {

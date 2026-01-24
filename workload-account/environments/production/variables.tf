@@ -133,9 +133,9 @@ variable "eks_node_group_internal" {
   type        = any
   default = {
     internal = {
-      min_size     = 2
-      max_size     = 10
-      desired_size = 3
+      min_size     = 1
+      max_size     = 5
+      desired_size = 2
 
       instance_types = ["m6i.large"]
       capacity_type  = "ON_DEMAND"
@@ -183,19 +183,11 @@ variable "github_oauth_client_id" {
   sensitive   = true
 }
 
-############################################
-# Additional Domains (Optional)
-############################################
-variable "domain_radiant_commons" {
-  description = "Additional domain for Radiant Commons (optional)"
+variable "github_oauth_client_secret" {
+  description = "GitHub OAuth client secret for ArgoCD SSO"
   type        = string
   default     = ""
-}
-
-variable "pilotgab_domain_enable" {
-  description = "Enable shared.pilotgab.com domain and certificate"
-  type        = bool
-  default     = false
+  sensitive   = true
 }
 
 ############################################
@@ -214,9 +206,9 @@ variable "db_allocated_storage" {
 }
 
 variable "db_engine_version" {
-  description = "PostgreSQL engine version"
+  description = "SQL Server engine version"
   type        = string
-  default     = "15.5"
+  default     = "16.00.4095.6.v1"
 }
 
 ############################################
@@ -232,4 +224,156 @@ variable "enable_dr_replication" {
   description = "Enable disaster recovery replication"
   type        = bool
   default     = true
+}
+
+############################################
+# EKS Backup and Restore Configuration
+############################################
+variable "backup_retention_days" {
+  description = "Number of days to retain Velero backups"
+  type        = number
+  default     = 30
+}
+
+variable "etcd_backup_retention_days" {
+  description = "Number of days to retain ETCD backups"
+  type        = number
+  default     = 7
+}
+
+variable "backup_schedule" {
+  description = "Cron schedule for automated backups (UTC)"
+  type        = string
+  default     = "0 2 * * *" # Daily at 2 AM UTC
+}
+
+variable "enable_velero_backup" {
+  description = "Enable Velero for Kubernetes resource backups"
+  type        = bool
+  default     = true
+}
+
+variable "enable_ebs_snapshots" {
+  description = "Enable automated EBS volume snapshots"
+  type        = bool
+  default     = true
+}
+
+variable "enable_etcd_backup" {
+  description = "Enable ETCD backup (for self-managed clusters)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_cross_region_backup" {
+  description = "Enable cross-region backup replication for disaster recovery"
+  type        = bool
+  default     = true
+}
+
+variable "enable_backup_monitoring" {
+  description = "Enable CloudWatch monitoring and alerting for backups"
+  type        = bool
+  default     = true
+}
+
+variable "backup_notification_topic_arn" {
+  description = "SNS topic ARN for backup failure notifications"
+  type        = string
+  default     = null
+}
+
+############################################
+# OpenSearch Configuration (for Jaeger Tracing)
+############################################
+variable "opensearch_instance_type" {
+  description = "Instance type for OpenSearch nodes"
+  type        = string
+  default     = "t3.small.search"
+}
+
+variable "opensearch_instance_count" {
+  description = "Number of instances in the OpenSearch cluster"
+  type        = number
+  default     = 3
+}
+
+variable "opensearch_dedicated_master_enabled" {
+  description = "Whether to enable dedicated master nodes"
+  type        = bool
+  default     = true
+}
+
+variable "opensearch_master_instance_type" {
+  description = "Instance type for dedicated master nodes"
+  type        = string
+  default     = "t3.small.search"
+}
+
+variable "opensearch_master_instance_count" {
+  description = "Number of dedicated master nodes"
+  type        = number
+  default     = 3
+}
+
+variable "opensearch_zone_awareness_enabled" {
+  description = "Whether to enable zone awareness"
+  type        = bool
+  default     = true
+}
+
+variable "opensearch_availability_zone_count" {
+  description = "Number of availability zones for zone awareness"
+  type        = number
+  default     = 3
+}
+
+variable "opensearch_volume_type" {
+  description = "EBS volume type for OpenSearch nodes"
+  type        = string
+  default     = "gp3"
+}
+
+variable "opensearch_volume_size" {
+  description = "EBS volume size in GB for OpenSearch nodes"
+  type        = number
+  default     = 20
+}
+
+variable "opensearch_iops" {
+  description = "IOPS for gp3/io1/io2 volumes"
+  type        = number
+  default     = 3000
+}
+
+variable "opensearch_throughput" {
+  description = "Throughput for gp3 volumes in MB/s"
+  type        = number
+  default     = 125
+}
+
+variable "opensearch_log_retention_days" {
+  description = "CloudWatch log retention in days for OpenSearch"
+  type        = number
+  default     = 30
+}
+
+variable "jaeger_index_prefix" {
+  description = "Index prefix for Jaeger traces in OpenSearch"
+  type        = string
+  default     = "jaeger-prod"
+}
+
+variable "jaeger_namespace" {
+  description = "Kubernetes namespace for Jaeger deployment"
+  type        = string
+  default     = "observability"
+}
+
+############################################
+# Cross-Account Integration
+############################################
+variable "security_account_id" {
+  description = "AWS Account ID of the security account for OpenSearch access"
+  type        = string
 }

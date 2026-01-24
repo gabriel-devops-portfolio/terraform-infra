@@ -14,7 +14,7 @@ data "aws_caller_identity" "current" {}
 ############################################
 locals {
   workload_account_id = data.aws_caller_identity.current.account_id
-  security_account_id = var.security_account_id # 404068503087
+  security_account_id = var.security_account_id # 333333444444
 
   common_tags = {
     ManagedBy   = "terraform"

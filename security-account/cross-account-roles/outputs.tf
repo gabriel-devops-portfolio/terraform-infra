@@ -68,25 +68,17 @@ output "kms_key_id" {
 ############################################
 # S3 Bucket Outputs
 ############################################
-output "cloudtrail_logs_bucket_arn" {
-  description = "ARN of CloudTrail logs S3 bucket"
-  value       = aws_s3_bucket.cloudtrail_logs.arn
+# Cross-Account Access Outputs
+############################################
+
+output "grafana_opensearch_role_arn" {
+  description = "ARN of the Grafana OpenSearch access role"
+  value       = aws_iam_role.grafana_opensearch.arn
 }
 
-output "cloudtrail_logs_bucket_name" {
-  description = "Name of CloudTrail logs S3 bucket"
-  value       = aws_s3_bucket.cloudtrail_logs.id
-}
-
-output "vpc_flow_logs_bucket_arn" {
-  description = "ARN of VPC Flow Logs S3 bucket"
-  value       = aws_s3_bucket.vpc_flow_logs.arn
-}
-
-output "vpc_flow_logs_bucket_name" {
-  description = "Name of VPC Flow Logs S3 bucket"
-  value       = aws_s3_bucket.vpc_flow_logs.id
-}
+############################################
+# Note: CloudTrail and VPC Flow Logs now stream directly to Security Lake via CloudWatch
+# No S3 buckets needed for these services
 
 output "security_lake_data_bucket_arn" {
   description = "ARN of Security Lake data S3 bucket"

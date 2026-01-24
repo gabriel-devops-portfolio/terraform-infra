@@ -5,7 +5,7 @@
 variable "security_account_id" {
   description = "AWS Account ID for the security account"
   type        = string
-  default     = "404068503087" # Update with actual security account ID
+  default     = "333333444444" # Update with actual security account ID
 }
 
 variable "management_account_id" {

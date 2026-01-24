@@ -6,14 +6,14 @@ module "egress_vpc" {
   cidr = var.egress_vpc_cidr
   azs  = var.azs
 
-  public_subnets = var.egress_public_subnets
+  public_subnets  = var.egress_public_subnets
+  private_subnets = var.firewall_subnets
 
-  intra_subnets = concat(
-    var.firewall_subnets,
-    var.tgw_subnets
-  )
+  intra_subnets = var.tgw_subnets
 
   create_igw = true
+
+  create_multiple_intra_route_tables = true
 
   enable_nat_gateway     = true
   single_nat_gateway     = false
@@ -48,7 +48,12 @@ module "egress_vpc" {
 
   intra_subnet_tags = {
     "Network" = "Inspection"
-    "Tier"    = "Firewall-TGW"
+    "Tier"    = "TGW"
+  }
+
+  private_subnet_tags = {
+    "Network" = "Inspection"
+    "Tier"    = "Firewall"
   }
 
   ################################
@@ -75,11 +80,11 @@ resource "aws_route_table" "igw" {
 
 # Route ingress traffic from IGW through firewall before reaching workloads
 resource "aws_route" "igw_to_firewall" {
-  for_each = local.firewall_endpoints
+  for_each = toset(var.azs)
 
   route_table_id         = aws_route_table.igw.id
   destination_cidr_block = var.workload_vpc_cidr
-  vpc_endpoint_id        = each.value
+  vpc_endpoint_id        = local.firewall_endpoints[each.value]
 }
 
 resource "aws_route_table_association" "igw" {

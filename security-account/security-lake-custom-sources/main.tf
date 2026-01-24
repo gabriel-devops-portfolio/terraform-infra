@@ -15,7 +15,7 @@ data "aws_region" "current" {}
 ############################################
 locals {
   security_account_id = data.aws_caller_identity.current.account_id
-  region              = data.aws_region.current.name
+  region              = data.aws_region.current.id
 
   common_tags = {
     ManagedBy   = "terraform"
@@ -69,9 +69,9 @@ resource "aws_lambda_function" "ocsf_transformer" {
 
   environment {
     variables = {
-      SECURITY_LAKE_CUSTOM_SOURCE_ARN_TERRAFORM = aws_securitylake_custom_log_source.terraform_state_access.arn
-      OCSF_VERSION                              = "1.1.0"
-      TERRAFORM_STATE_LOGS_BUCKET               = local.terraform_state_logs_bucket_name
+      SECURITY_LAKE_CUSTOM_SOURCE_NAME_TERRAFORM = aws_securitylake_custom_log_source.terraform_state_access.source_name
+      OCSF_VERSION                               = "1.1.0"
+      TERRAFORM_STATE_LOGS_BUCKET                = local.terraform_state_logs_bucket_name
     }
   }
 

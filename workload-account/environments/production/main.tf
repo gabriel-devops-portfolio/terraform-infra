@@ -2,11 +2,14 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 ############################
 # Local Values
 ############################
 locals {
-  cluster_name = "${var.env}-eks-cluster"
+  cluster_name = "pilotgab-prod"
 
   auth_users = var.auth_users != null ? var.auth_users : []
   auth_roles = var.auth_roles != null ? var.auth_roles : []
@@ -92,7 +95,7 @@ module "kms" {
 }
 
 ############################
-# Route53 and ACM
+# Route53
 ############################
 resource "aws_route53_zone" "primary" {
   name = var.domain_name
@@ -109,6 +112,7 @@ module "kubernetes" {
   source = "../../modules/eks"
 
   # Basic Configuration
+  cluster_name        = local.cluster_name
   eks_cluster_name    = local.cluster_name
   eks_cluster_version = var.eks_cluster_version
 
@@ -118,8 +122,8 @@ module "kubernetes" {
 
   # Security Configuration
   eks_kms_arn                          = module.kms.eks_kms_key_arn
-  eks_cluster_endpoint_private_access  = true
-  eks_cluster_endpoint_public_access   = false
+  eks_cluster_endpoint_private_access  = false
+  eks_cluster_endpoint_public_access   = true
   cluster_endpoint_public_access_cidrs = var.eks_cluster_endpoint_public_access_cidrs
 
   # Logging Configuration
@@ -191,10 +195,10 @@ module "kubernetes" {
     }
   }
 
-  depends_on = [
-    module.network,
-    module.kms
-  ]
+  # Tags
+  tags = var.tags
+
+
 }
 
 ############################
@@ -257,16 +261,6 @@ module "efs_csi_irsa" {
 }
 
 ############################
-# EKS Additional Roles
-############################
-module "eks_roles" {
-  source     = "../../modules/eks-roles"
-  cluster_id = module.kubernetes.cluster_id
-
-  depends_on = [module.kubernetes]
-}
-
-############################
 # Karpenter Configuration
 ############################
 
@@ -287,6 +281,131 @@ resource "aws_iam_instance_profile" "karpenter" {
   tags = var.tags
 }
 
+resource "aws_iam_policy" "karpenter_controller" {
+  name        = "pilotgab-prod-KarpenterControllerPolicy"
+  description = "Policy for Karpenter controller"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateFleet",
+          "ec2:CreateLaunchTemplate",
+          "ec2:CreateTags",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeImages",
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceTypeOfferings",
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeLaunchTemplates",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSpotPriceHistory",
+          "ec2:DescribeSubnets",
+          "ec2:DeleteLaunchTemplate",
+          "ec2:RunInstances",
+          "ec2:TerminateInstances"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole"
+        ]
+        Resource = module.kubernetes.eks_managed_node_groups["internal"].iam_role_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:DescribeCluster"
+        ]
+        Resource = module.kubernetes.cluster_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "pricing:GetProducts"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = "arn:aws:ssm:us-east-1::parameter/aws/service/*"
+      }
+    ]
+  })
+}
+
+# Karpenter Controller IRSA Role
+module "karpenter_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.0"
+
+  role_name = "${local.cluster_name}-Karpenter-IRSA"
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.kubernetes.oidc_provider_arn
+      namespace_service_accounts = ["karpenter:karpenter"]
+    }
+  }
+
+  role_policy_arns = {
+    policy = aws_iam_policy.karpenter_controller.arn
+  }
+
+  tags = var.tags
+}
+
+############################
+# OpenSearch Module (for Jaeger Tracing)
+############################
+module "opensearch" {
+  source = "../../modules/opensearch"
+
+  # Basic Configuration
+  environment = var.env
+  vpc_id      = module.network.workload_vpc_id
+  vpc_cidr    = var.workload_vpc_cidr
+  subnet_ids  = module.network.workload_private_subnets
+
+  # IRSA Configuration
+  oidc_provider_arn = module.kubernetes.oidc_provider_arn
+  oidc_provider_url = replace(module.kubernetes.cluster_oidc_issuer_url, "https://", "")
+
+  # OpenSearch Configuration
+  instance_type            = var.opensearch_instance_type
+  instance_count           = var.opensearch_instance_count
+  dedicated_master_enabled = var.opensearch_dedicated_master_enabled
+  master_instance_type     = var.opensearch_master_instance_type
+  master_instance_count    = var.opensearch_master_instance_count
+  zone_awareness_enabled   = var.opensearch_zone_awareness_enabled
+  availability_zone_count  = var.opensearch_availability_zone_count
+
+  # Storage Configuration
+  volume_type = var.opensearch_volume_type
+  volume_size = var.opensearch_volume_size
+  iops        = var.opensearch_iops
+  throughput  = var.opensearch_throughput
+
+  # Jaeger Configuration
+  jaeger_index_prefix = var.jaeger_index_prefix
+  jaeger_namespace    = var.jaeger_namespace
+
+  # Logging
+  log_retention_days = var.opensearch_log_retention_days
+
+  depends_on = [
+    module.network,
+    module.kubernetes
+  ]
+}
+
 ############################
 # ArgoCD (GitOps)
 ############################
@@ -299,12 +418,13 @@ module "argocd" {
 
   argocd_helm_values = [
     templatefile("${path.module}/k8s-manifest/argocd-values.yaml", {
-      dex_config_github_client_id = var.github_oauth_client_id
-      private_domain              = "argocd-prod.app.pilotgab.com"
-      enableLocalRedis            = true
-      enable_admin_login          = true
-      loggingLevel                = "info"
-      redisExternalHost           = ""
+      dex_config_github_client_id     = var.github_oauth_client_id
+      dex_config_github_client_secret = var.github_oauth_client_secret
+      private_domain                  = "argocd-prod.app.pilotgab.com"
+      enableLocalRedis                = true
+      enable_admin_login              = true
+      loggingLevel                    = "info"
+      redisExternalHost               = ""
     })
   ]
 
@@ -312,25 +432,48 @@ module "argocd" {
 }
 
 ############################
-# Additional Route53 and ACM for shared.pilotgab.com (Optional)
+# EKS Backup and Restore Module
 ############################
-module "route53_pilotgab" {
-  source = "../../modules/aws_route53_zone_public"
+module "eks_backup" {
+  source = "../../modules/eks-backup"
 
-  domain_name = "pilotgab.com"
+  # Basic Configuration
+  cluster_name      = local.cluster_name
+  oidc_provider_arn = module.kubernetes.oidc_provider_arn
+  kms_key_arn       = module.kms.eks_kms_key_arn
 
-  count = var.pilotgab_domain_enable ? 1 : 0
+  # Backup Configuration
+  backup_retention_days      = var.backup_retention_days
+  etcd_backup_retention_days = var.etcd_backup_retention_days
+  backup_schedule            = var.backup_schedule
+
+  # Feature Flags
+  enable_velero              = var.enable_velero_backup
+  enable_ebs_snapshots       = var.enable_ebs_snapshots
+  enable_etcd_backup         = var.enable_etcd_backup
+  enable_cross_region_backup = var.enable_cross_region_backup
+  enable_backup_monitoring   = var.enable_backup_monitoring
+
+  # Cross-Region DR Configuration
+  dr_backup_bucket_arn = var.enable_cross_region_backup ? aws_s3_bucket.dr_backups.arn : null
+  dr_kms_key_arn       = var.enable_cross_region_backup ? aws_kms_key.dr_region.arn : null
+
+  # Monitoring Configuration
+  sns_topic_arn = var.backup_notification_topic_arn
+
+  tags = var.tags
+
+  depends_on = [
+    module.kubernetes,
+    module.kms
+  ]
 }
 
 ############################
 # Cross-Region Disaster Recovery
 ############################
 
-# DR Region Provider (us-west-2)
-provider "aws" {
-  alias  = "dr_region"
-  region = var.dr_region
-}
+
 
 # KMS Key for DR Region
 resource "aws_kms_key" "dr_region" {
@@ -430,6 +573,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "dr_backups" {
   rule {
     id     = "transition-to-ia"
     status = "Enabled"
+
+    filter {}
 
     transition {
       days          = 30
@@ -540,15 +685,6 @@ resource "aws_iam_role_policy" "replication" {
   })
 }
 
-# Enable versioning on primary backup bucket (required for replication)
-resource "aws_s3_bucket_versioning" "primary_backups" {
-  bucket = module.data.backup_bucket_name
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
 # S3 Cross-Region Replication Configuration
 resource "aws_s3_bucket_replication_configuration" "backup" {
   bucket = module.data.backup_bucket_name
@@ -590,11 +726,8 @@ resource "aws_s3_bucket_replication_configuration" "backup" {
   }
 
   depends_on = [
-    aws_s3_bucket_versioning.primary_backups,
+    module.data,
     aws_s3_bucket.dr_backups,
     aws_iam_role_policy.replication
   ]
 }
-
-# Data source for current AWS account
-data "aws_caller_identity" "current" {}

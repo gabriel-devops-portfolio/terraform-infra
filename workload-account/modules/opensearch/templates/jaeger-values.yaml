@@ -1,0 +1,118 @@
+provisionDataStore:
+  cassandra: false
+  elasticsearch: true
+
+storage:
+  type: elasticsearch
+  elasticsearch:
+    host: ${opensearch_endpoint}
+    port: 443
+    scheme: https
+    indexPrefix: ${index_prefix}
+    # OpenSearch/Elasticsearch configuration
+    tls:
+      enabled: true
+      skipHostVerify: false
+    # AWS authentication will be handled via IRSA
+
+collector:
+  replicaCount: 2
+  serviceAccount:
+    create: true
+    name: jaeger-collector
+    annotations:
+      eks.amazonaws.com/role-arn: ${role_arn}
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2
+      memory: 2Gi
+
+  # Environment variables for AWS authentication
+  env:
+    - name: AWS_REGION
+      value: us-east-1
+    - name: AWS_DEFAULT_REGION
+      value: us-east-1
+
+  # Collector configuration
+  config:
+    span_storage_type: elasticsearch
+
+query:
+  replicaCount: 2
+  serviceAccount:
+    create: true
+    name: jaeger-query
+    annotations:
+      eks.amazonaws.com/role-arn: ${role_arn}
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1
+      memory: 1Gi
+
+  # Environment variables for AWS authentication
+  env:
+    - name: AWS_REGION
+      value: us-east-1
+    - name: AWS_DEFAULT_REGION
+      value: us-east-1
+
+  # Query service configuration
+  config:
+    span_storage_type: elasticsearch
+
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: jaeger.app.pilotgab.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: jaeger-tls
+        hosts:
+          - jaeger.app.pilotgab.com
+
+agent:
+  enabled: false  # Using OpenTelemetry Collector instead
+
+# Jaeger UI configuration
+query:
+  basePath: /
+
+# OpenSearch index management
+esIndexCleaner:
+  enabled: true
+  numberOfDays: 7
+  schedule: "55 23 * * *"
+  serviceAccount:
+    create: true
+    name: jaeger-es-index-cleaner
+    annotations:
+      eks.amazonaws.com/role-arn: ${role_arn}
+
+# Spark dependencies job (optional)
+spark:
+  enabled: false
+
+# Cassandra schema job (disabled since using OpenSearch)
+cassandra:
+  enabled: false
+
+# Global labels
+commonLabels:
+  app.kubernetes.io/part-of: jaeger
+  app.kubernetes.io/managed-by: terraform

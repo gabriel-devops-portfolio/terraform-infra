@@ -1,141 +1,158 @@
-############################################
-# Environment
-############################################
-env    = "prod"
+# Production Environment Configuration
+
+############################
+# Global Configuration
+############################
+env    = "production"
 region = "us-east-1"
+azs    = ["us-east-1a", "us-east-1b", "us-east-1c"]
 
-azs = [
-  "us-east-1a",
-  "us-east-1b",
-  "us-east-1c"
-]
-
-############################################
-# Workload VPC (Spoke)
-############################################
-workload_vpc_cidr = "10.10.0.0/16" # 65,536 IPs
-
-# Private subnets for EKS, RDS, internal workloads
-workload_private_subnets = [
-  "10.10.1.0/24", # AZ-a (256 IPs)
-  "10.10.2.0/24", # AZ-b (256 IPs)
-  "10.10.3.0/24"  # AZ-c (256 IPs)
-]
-
-############################################
-# Egress VPC (Hub)
-############################################
-egress_vpc_cidr = "10.0.0.0/16" # 65,536 IPs
-
-# Public subnets for NAT Gateways
-egress_public_subnets = [
-  "10.0.1.0/24", # AZ-a (256 IPs)
-  "10.0.2.0/24", # AZ-b (256 IPs)
-  "10.0.3.0/24"  # AZ-c (256 IPs)
-]
-
-# Network Firewall subnets (AWS requires /28)
-firewall_subnets = [
-  "10.0.101.0/28", # AZ-a (16 IPs, 11 usable)
-  "10.0.102.0/28", # AZ-b (16 IPs, 11 usable)
-  "10.0.103.0/28"  # AZ-c (16 IPs, 11 usable)
-]
-
-# Transit Gateway attachment subnets (/28)
-tgw_subnets = [
-  "10.0.201.0/28", # AZ-a (16 IPs, 11 usable)
-  "10.0.202.0/28", # AZ-b (16 IPs, 11 usable)
-  "10.0.203.0/28"  # AZ-c (16 IPs, 11 usable)
-]
-
-# Database subnets for RDS, Aurora, DocumentDB
-workload_database_subnets = [
-  "10.10.11.0/24", # AZ-a (256 IPs)
-  "10.10.12.0/24", # AZ-b (256 IPs)
-  "10.10.13.0/24"  # AZ-c (256 IPs)
-]
-
-############################################
-# Tags
-############################################
 tags = {
   Environment = "production"
-  Project     = "enterprise-infrastructure"
+  Project     = "pilotgab"
   ManagedBy   = "terraform"
   Owner       = "platform-team"
 }
 
-############################################
-# Compute
-############################################
+############################
+# Network Configuration
+############################
+# Workload VPC (Spoke) - Private workloads
+workload_vpc_cidr         = "10.1.0.0/16"
+workload_private_subnets  = ["10.1.1.0/24", "10.1.2.0/24", "10.1.3.0/24"]
+workload_database_subnets = ["10.1.11.0/24", "10.1.12.0/24", "10.1.13.0/24"]
+
+# Egress VPC (Hub) - Internet access and security controls
+egress_vpc_cidr       = "10.2.0.0/16"
+egress_public_subnets = ["10.2.1.0/24", "10.2.2.0/24", "10.2.3.0/24"]
+firewall_subnets      = ["10.2.11.0/28", "10.2.12.0/28", "10.2.13.0/28"]
+tgw_subnets           = ["10.2.21.0/28", "10.2.22.0/28", "10.2.23.0/28"]
+
+enable_nat = true
+
+############################
+# Domain Configuration
+############################
 domain_name = "pilotgab.com"
 
-############################################
-# EKS Cluster Configuration
-############################################
+############################
+# EKS Configuration
+############################
 eks_cluster_version                      = "1.31"
-eks_config_output_dir_path               = "./kubeconfig"
-eks_cluster_endpoint_public_access_cidrs = [] # Private cluster, no public access
-cloudwatch_log_retention_days            = 7
+eks_config_output_dir_path               = "./"
+eks_cluster_endpoint_public_access_cidrs = []
+cloudwatch_log_retention_days            = 30
 
-# AWS Auth Configuration (Add your IAM users/roles here)
-accounts   = [] # Additional AWS account IDs
-auth_users = [] # IAM users for kubectl access
-auth_roles = [] # IAM roles for kubectl access
-
-# Example IAM user configuration:
-# auth_users = [
-#   {
-#     userarn  = "arn:aws:iam::ACCOUNT_ID:user/admin"
-#     username = "admin"
-#     groups   = ["system:masters"]
-#   }
-# ]
-
-# EKS Node Group Configuration
+# EKS Node Groups
 eks_node_group_internal = {
   internal = {
-    name           = "internal-node-group"
-    min_size       = 2
-    max_size       = 10
-    desired_size   = 3
-    instance_types = ["m6i.large"]
-    capacity_type  = "ON_DEMAND"
-    disk_size      = 50
+    min_size     = 2
+    max_size     = 10
+    desired_size = 3
+
+    instance_types = ["m6i.large", "m6i.xlarge"]
+    capacity_type  = "SPOT"
 
     labels = {
-      Environment = "production"
-      NodeGroup   = "internal"
-      Workload    = "general"
+      Environment  = "production"
+      NodeGroup    = "internal"
+      WorkloadType = "general"
     }
 
     taints = []
 
     tags = {
-      NodeGroup = "internal"
-      Backup    = "true"
+      NodeGroup                = "internal"
+      "karpenter.sh/discovery" = "pilotgab-prod"
     }
   }
 }
 
-# EKS Add-on Versions (use latest compatible versions)
+# EKS Add-on Versions
 ebs_csi_driver_version = "v1.37.0-eksbuild.1"
 efs_csi_driver_version = "v2.1.1-eksbuild.1"
 
-############################################
+############################
 # ArgoCD Configuration
-############################################
-argocd_version         = "7.8.23"
-github_oauth_client_id = "" # Add your GitHub OAuth client ID for SSO
+############################
+argocd_version = "9.2.4"
+# github_oauth_client_id = "your-github-oauth-client-id" # Set via environment variable
 
-############################################
-# Additional Domains
-############################################
-domain_radiant_commons = ""   # Optional: Add if you need additional domain
-pilotgab_domain_enable = true # Set to true to enable shared.pilotgab.com
+############################
+# Database Configuration
+############################
+db_instance_class    = "db.t3.medium"
+db_allocated_storage = 100
+db_engine_version    = "16.00.4095.6.v1"
 
-############################################
-# Disaster Recovery Configuration
-############################################
-dr_region             = "us-west-2" # DR region for backup replication
-enable_dr_replication = true        # Enable cross-region DR
+############################
+# OpenSearch Configuration (for Jaeger Tracing)
+############################
+opensearch_instance_type            = "t3.small.search"
+opensearch_instance_count           = 3
+opensearch_dedicated_master_enabled = true
+opensearch_master_instance_type     = "t3.small.search"
+opensearch_master_instance_count    = 3
+opensearch_zone_awareness_enabled   = true
+opensearch_availability_zone_count  = 3
+
+# Storage Configuration
+opensearch_volume_type = "gp3"
+opensearch_volume_size = 20
+opensearch_iops        = 3000
+opensearch_throughput  = 125
+
+# Jaeger Configuration
+jaeger_index_prefix = "jaeger-prod"
+jaeger_namespace    = "observability"
+
+# Logging
+opensearch_log_retention_days = 30
+
+############################
+# Backup and Disaster Recovery
+############################
+dr_region             = "us-west-2"
+enable_dr_replication = true
+
+# Backup Configuration
+backup_retention_days      = 30
+etcd_backup_retention_days = 7
+backup_schedule            = "0 2 * * *" # Daily at 2 AM UTC
+
+# Backup Features
+enable_velero_backup       = true
+enable_ebs_snapshots       = true
+enable_etcd_backup         = false
+enable_cross_region_backup = true
+enable_backup_monitoring   = true
+
+# backup_notification_topic_arn = "arn:aws:sns:us-east-1:ACCOUNT:backup-notifications" # Optional
+
+############################
+# Cross-Account Integration
+############################
+security_account_id = "333333444444"
+
+############################
+# Authentication (Optional)
+############################
+accounts = []
+
+# Example IAM users for EKS access (uncomment and modify as needed)
+# auth_users = [
+#   {
+#     userarn  = "arn:aws:iam::ACCOUNT:user/admin"
+#     username = "admin"
+#     groups   = ["system:masters"]
+#   }
+# ]
+
+# Example IAM roles for EKS access (uncomment and modify as needed)
+# auth_roles = [
+#   {
+#     rolearn  = "arn:aws:iam::ACCOUNT:role/EKSAdminRole"
+#     username = "eks-admin"
+#     groups   = ["system:masters"]
+#   }
+# ]

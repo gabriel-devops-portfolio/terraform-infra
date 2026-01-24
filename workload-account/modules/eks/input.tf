@@ -196,3 +196,14 @@ YAML
 variable "eks_full_access_role" {
   default = "EKS-Full-Access"
 }
+
+variable "cluster_name" {
+  type        = string
+  description = "Name of the EKS cluster"
+}
+
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {}
+}

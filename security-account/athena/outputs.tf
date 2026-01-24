@@ -4,12 +4,12 @@
 
 output "athena_workgroup_name" {
   description = "Name of the Athena workgroup for Security Lake queries"
-  value       = data.aws_athena_workgroup.security_lake.name
+  value       = local.athena_workgroup_name
 }
 
 output "athena_database_name" {
   description = "Name of the Glue catalog database for Security Lake"
-  value       = data.aws_glue_catalog_database.security_lake.name
+  value       = local.security_lake_database_name
 }
 
 output "athena_named_queries" {

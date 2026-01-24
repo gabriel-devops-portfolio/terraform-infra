@@ -5,7 +5,7 @@
 variable "workload_account_id" {
   description = "AWS Account ID for the workload account"
   type        = string
-  default     = "290793900072" # Update this with actual workload account ID
+  default     = "555555666666" # Update this with actual workload account ID
 }
 
 variable "enable_guardduty" {

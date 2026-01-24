@@ -22,14 +22,10 @@ data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
 
-# Reference to Security Lake Glue database
-data "aws_glue_catalog_database" "security_lake" {
-  name = "amazon_security_lake_glue_db_${replace(var.region, "-", "_")}"
-}
-
-# Reference to Athena workgroup
-data "aws_athena_workgroup" "security_lake" {
-  name = "security-lake-queries"
+# Reference to Security Lake Glue database name
+locals {
+  security_lake_database_name = "amazon_security_lake_glue_db_${replace(var.region, "-", "_")}"
+  athena_workgroup_name       = "security-lake-queries"
 }
 
 # Reference to Athena results bucket from cross-account-roles
@@ -42,8 +38,8 @@ data "aws_s3_bucket" "athena_results" {
 ############################################
 resource "aws_athena_named_query" "vpc_traffic_anomalies" {
   name        = "vpc-traffic-anomalies-ocsf"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Detect anomalous VPC traffic patterns using OCSF format (rejected connections and unusual ports)"
 
   query = <<-EOF
@@ -78,8 +74,8 @@ resource "aws_athena_named_query" "vpc_traffic_anomalies" {
 ############################################
 resource "aws_athena_named_query" "create_vpc_traffic_anomalies_view" {
   name        = "create-view-vpc-traffic-anomalies-ocsf"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Creates a reusable view for VPC traffic anomalies using OCSF schema"
 
   query = <<-EOF
@@ -108,8 +104,8 @@ resource "aws_athena_named_query" "create_vpc_traffic_anomalies_view" {
 ############################################
 resource "aws_athena_named_query" "terraform_state_access" {
   name        = "terraform-state-access"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Query all access to Terraform state files"
 
   query = <<-EOF
@@ -141,8 +137,8 @@ resource "aws_athena_named_query" "terraform_state_access" {
 ############################################
 resource "aws_athena_named_query" "create_terraform_state_view" {
   name        = "create-view-terraform-state-access"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Creates a reusable view for Terraform state access monitoring"
 
   query = <<-EOF
@@ -165,8 +161,8 @@ resource "aws_athena_named_query" "create_terraform_state_view" {
 ############################################
 resource "aws_athena_named_query" "privileged_activity" {
   name        = "privileged-activity-monitoring"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Monitor root account and privileged role activity"
 
   query = <<-EOF
@@ -196,8 +192,8 @@ resource "aws_athena_named_query" "privileged_activity" {
 ############################################
 resource "aws_athena_named_query" "create_privileged_activity_view" {
   name        = "create-view-privileged-activity"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Creates a reusable view for privileged activity monitoring"
 
   query = <<-EOF
@@ -222,8 +218,8 @@ resource "aws_athena_named_query" "create_privileged_activity_view" {
 ############################################
 resource "aws_athena_named_query" "guardduty_findings" {
   name        = "guardduty-high-severity-findings"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Query high and critical severity GuardDuty findings"
 
   query = <<-EOF
@@ -254,8 +250,8 @@ resource "aws_athena_named_query" "guardduty_findings" {
 ############################################
 resource "aws_athena_named_query" "create_guardduty_view" {
   name        = "create-view-security-hub-findings-ocsf"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Creates a reusable view for Security Hub findings using OCSF schema"
 
   query = <<-EOF
@@ -279,8 +275,8 @@ resource "aws_athena_named_query" "create_guardduty_view" {
 ############################################
 resource "aws_athena_named_query" "failed_auth_attempts" {
   name        = "failed-authentication-attempts"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Detect failed authentication and authorization attempts"
 
   query = <<-EOF
@@ -312,8 +308,8 @@ resource "aws_athena_named_query" "failed_auth_attempts" {
 ############################################
 resource "aws_athena_named_query" "s3_public_access_changes" {
   name        = "s3-public-access-changes"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Detect changes to S3 bucket public access settings"
 
   query = <<-EOF
@@ -344,8 +340,8 @@ resource "aws_athena_named_query" "s3_public_access_changes" {
 ############################################
 resource "aws_athena_named_query" "security_group_changes" {
   name        = "security-group-changes"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Monitor security group rule modifications"
 
   query = <<-EOF
@@ -381,8 +377,8 @@ resource "aws_athena_named_query" "security_group_changes" {
 ############################################
 resource "aws_athena_named_query" "correlated_security_events" {
   name        = "multi-source-correlated-security-events"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Correlate blocked VPC traffic with failed API calls from the same source IP (Multi-Source OCSF)"
 
   query = <<-EOF
@@ -436,8 +432,8 @@ resource "aws_athena_named_query" "correlated_security_events" {
 ############################################
 resource "aws_athena_named_query" "cross_source_threat_intel" {
   name        = "multi-source-threat-intelligence"
-  workgroup   = data.aws_athena_workgroup.security_lake.name
-  database    = data.aws_glue_catalog_database.security_lake.name
+  workgroup   = local.athena_workgroup_name
+  database    = local.security_lake_database_name
   description = "Aggregate suspicious activity indicators across VPC Flow, CloudTrail, and Security Hub (Multi-Source OCSF)"
 
   query = <<-EOF

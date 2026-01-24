@@ -1,0 +1,202 @@
+# Velero Restore Examples for ${cluster_name}
+
+---
+# Example 1: Full cluster restore
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: full-cluster-restore
+  namespace: velero
+spec:
+  backupName: daily-backup-20240120-020000
+  includedNamespaces:
+  - "*"
+  excludedNamespaces:
+  - kube-system
+  - kube-public
+  - kube-node-lease
+  - velero
+  includeClusterResources: true
+  restorePVs: true
+
+---
+# Example 2: Namespace-specific restore
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: production-namespace-restore
+  namespace: velero
+spec:
+  backupName: daily-backup-20240120-020000
+  includedNamespaces:
+  - production
+  - production-data
+  includeClusterResources: false
+  restorePVs: true
+  namespaceMappings:
+    production: production-restored
+    production-data: production-data-restored
+
+---
+# Example 3: Application-specific restore with label selector
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: app-specific-restore
+  namespace: velero
+spec:
+  backupName: daily-backup-20240120-020000
+  labelSelector:
+    matchLabels:
+      app: banking-api
+      environment: production
+  includeClusterResources: false
+  restorePVs: true
+
+---
+# Example 4: Resource-type specific restore
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: config-only-restore
+  namespace: velero
+spec:
+  backupName: daily-backup-20240120-020000
+  includedResources:
+  - configmaps
+  - secrets
+  - services
+  includedNamespaces:
+  - production
+  includeClusterResources: false
+  restorePVs: false
+
+---
+# Example 5: Cross-region disaster recovery restore
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: disaster-recovery-restore
+  namespace: velero
+spec:
+  backupName: weekly-backup-20240114-010000
+  includedNamespaces:
+  - "*"
+  excludedNamespaces:
+  - kube-system
+  - kube-public
+  - kube-node-lease
+  - velero
+  includeClusterResources: true
+  restorePVs: true
+  # Restore hooks for post-restore actions
+  hooks:
+    resources:
+    - name: restart-deployments
+      includedNamespaces:
+      - production
+      includedResources:
+      - deployments
+      postHooks:
+      - exec:
+          container: main
+          command:
+          - /bin/sh
+          - -c
+          - "echo 'Deployment restored at $(date)' >> /var/log/restore.log"
+
+---
+# Example 6: Partial restore with exclusions
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: partial-restore-exclude-pvs
+  namespace: velero
+spec:
+  backupName: daily-backup-20240120-020000
+  includedNamespaces:
+  - staging
+  excludedResources:
+  - persistentvolumes
+  - persistentvolumeclaims
+  includeClusterResources: false
+  restorePVs: false
+
+---
+# Example 7: Restore with resource modifications
+apiVersion: velero.io/v1
+kind: Restore
+metadata:
+  name: restore-with-modifications
+  namespace: velero
+spec:
+  backupName: daily-backup-20240120-020000
+  includedNamespaces:
+  - development
+  includeClusterResources: false
+  restorePVs: true
+  # Modify resources during restore
+  resourceModifier:
+    version: v1
+    resourceModifierRules:
+    - conditions:
+        groupResource: deployments.apps
+        resourceNameRegex: ".*"
+        namespaces:
+        - development
+      patches:
+      - operation: replace
+        path: "/spec/replicas"
+        value: "1"
+      - operation: replace
+        path: "/spec/template/spec/containers/0/resources/requests/memory"
+        value: "128Mi"
+
+---
+# Example 8: Scheduled restore (using CronJob)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: automated-restore-test
+  namespace: velero
+spec:
+  schedule: "0 4 * * 1" # Weekly on Monday at 4 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: restore-test
+            image: velero/velero:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Create test namespace
+              kubectl create namespace restore-test-$(date +%Y%m%d) || true
+
+              # Perform test restore
+              velero restore create test-restore-$(date +%Y%m%d-%H%M%S) \
+                --from-backup $(velero backup get --output json | jq -r '.items[0].metadata.name') \
+                --include-namespaces "staging" \
+                --namespace-mappings "staging:restore-test-$(date +%Y%m%d)" \
+                --wait
+
+              # Verify restore
+              kubectl get all -n restore-test-$(date +%Y%m%d)
+
+              # Cleanup after 1 hour
+              sleep 3600
+              kubectl delete namespace restore-test-$(date +%Y%m%d)
+            env:
+            - name: KUBECONFIG
+              value: /etc/kubeconfig/config
+            volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/kubeconfig
+          volumes:
+          - name: kubeconfig
+            secret:
+              secretName: kubeconfig
+          restartPolicy: OnFailure
+          serviceAccountName: velero

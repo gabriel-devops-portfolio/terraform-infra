@@ -6,8 +6,6 @@
 ############################################
 # Data Sources
 ############################################
-data "aws_caller_identity" "current" {}
-
 data "aws_region" "current" {}
 
 data "aws_organizations_organization" "org" {}
@@ -20,7 +18,7 @@ locals {
   security_account_id   = data.aws_caller_identity.current.account_id
   workload_account_id   = var.workload_account_id
   management_account_id = data.aws_organizations_organization.org.master_account_id
-  region                = data.aws_region.current.name
+  region                = data.aws_region.current.id
 
   common_tags = {
     ManagedBy   = "terraform"
@@ -543,18 +541,6 @@ resource "aws_iam_role_policy" "opensearch" {
         Resource = [
           "arn:aws:s3:::aws-security-data-lake-${local.region}-${local.security_account_id}",
           "arn:aws:s3:::aws-security-data-lake-${local.region}-${local.security_account_id}/*"
-        ]
-      },
-      {
-        Sid    = "LegacyVPCFlowLogsAccess"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          aws_s3_bucket.vpc_flow_logs.arn,
-          "${aws_s3_bucket.vpc_flow_logs.arn}/*"
         ]
       },
       {

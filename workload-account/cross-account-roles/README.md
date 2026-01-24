@@ -4,8 +4,8 @@
 
 This directory contains Terraform configuration for creating IAM roles in the **Workload Account** that allow the **Security Account** to access security services and aggregate logs/findings.
 
-**Workload Account ID**: `290793900072` (assumed)
-**Security Account ID**: `404068503087` (assumed)
+**Workload Account ID**: `555555666666` (assumed)
+**Security Account ID**: `333333444444` (assumed)
 **Primary Region**: `us-east-1`
 **Purpose**: Enable security monitoring and log aggregation
 
@@ -14,6 +14,7 @@ This directory contains Terraform configuration for creating IAM roles in the **
 ## 🏗️ Infrastructure Components
 
 ### IAM Roles (`iam-roles.tf`)
+
 Creates 8 cross-account IAM roles:
 
 1. **TerraformExecutionRole**
@@ -24,13 +25,13 @@ Creates 8 cross-account IAM roles:
 
 2. **GuardDutyMemberRole**
    - Purpose: Allow security account to access GuardDuty findings
-   - Trusted: Security account (404068503087)
+   - Trusted: Security account (333333444444)
    - Service: guardduty.amazonaws.com
    - External ID: `guardduty-member-{account-id}`
 
 3. **SecurityHubMemberRole**
    - Purpose: Allow security account to aggregate Security Hub findings
-   - Trusted: Security account (404068503087)
+   - Trusted: Security account (333333444444)
    - Service: securityhub.amazonaws.com
 
 4. **ConfigAggregateAuthorization**
@@ -40,7 +41,7 @@ Creates 8 cross-account IAM roles:
 
 5. **SecurityLakeQueryRole**
    - Purpose: Allow security account to query logs
-   - Trusted: Security account (404068503087)
+   - Trusted: Security account (333333444444)
    - Permissions: S3, Glue, CloudWatch Logs read access
 
 6. **CloudWatchLogsSenderRole**
@@ -55,7 +56,7 @@ Creates 8 cross-account IAM roles:
 
 8. **DetectiveMemberRole**
    - Purpose: Allow security account to investigate security events
-   - Trusted: Security account (404068503087)
+   - Trusted: Security account (333333444444)
    - Permissions: Detective read access
 
 ---
@@ -83,7 +84,7 @@ Edit `variables.tf` with actual account IDs:
 
 ```hcl
 variable "security_account_id" {
-  default = "YOUR_SECURITY_ACCOUNT_ID"  # Replace 404068503087
+  default = "YOUR_SECURITY_ACCOUNT_ID"  # Replace 333333444444
 }
 
 variable "management_account_id" {
@@ -105,6 +106,7 @@ terraform plan
 ```
 
 **Expected Resources**: 16 resources to create
+
 - 8 IAM roles
 - 7 IAM role policies
 - 1 Config aggregate authorization
@@ -118,6 +120,7 @@ terraform apply
 ### Step 5: Verify Deployment
 
 Check outputs:
+
 ```bash
 terraform output
 ```
@@ -129,6 +132,7 @@ You should see ARNs for all roles.
 After roles are created, accept invitations from security account:
 
 1. **GuardDuty**:
+
    ```bash
    # Get invitation ID
    aws guardduty list-invitations
@@ -136,7 +140,7 @@ After roles are created, accept invitations from security account:
    # Accept invitation
    aws guardduty accept-invitation \
      --detector-id <your-detector-id> \
-     --master-id 404068503087 \
+     --master-id 333333444444 \
      --invitation-id <invitation-id>
    ```
 
@@ -154,24 +158,24 @@ After roles are created, accept invitations from security account:
 
 ### Workload Account Trusts
 
-| Role | Trusted Principal | Purpose |
-|------|-------------------|---------|
-| TerraformExecutionRole | Management account | Terraform operations |
-| GuardDutyMemberRole | Security account + guardduty.amazonaws.com | GuardDuty findings access |
-| SecurityHubMemberRole | Security account + securityhub.amazonaws.com | Security Hub findings access |
-| SecurityLakeQueryRole | Security account | Log query access |
-| CloudWatchLogsSenderRole | logs.amazonaws.com | Send logs to security account |
-| VPCFlowLogsRole | vpc-flow-logs.amazonaws.com | VPC flow logs delivery |
-| DetectiveMemberRole | Security account | Detective investigation |
+| Role                     | Trusted Principal                            | Purpose                       |
+| ------------------------ | -------------------------------------------- | ----------------------------- |
+| TerraformExecutionRole   | Management account                           | Terraform operations          |
+| GuardDutyMemberRole      | Security account + guardduty.amazonaws.com   | GuardDuty findings access     |
+| SecurityHubMemberRole    | Security account + securityhub.amazonaws.com | Security Hub findings access  |
+| SecurityLakeQueryRole    | Security account                             | Log query access              |
+| CloudWatchLogsSenderRole | logs.amazonaws.com                           | Send logs to security account |
+| VPCFlowLogsRole          | vpc-flow-logs.amazonaws.com                  | VPC flow logs delivery        |
+| DetectiveMemberRole      | Security account                             | Detective investigation       |
 
 ### Cross-Account Permissions
 
-| Role | Target Account | Permission | Resource |
-|------|----------------|------------|----------|
-| CloudWatchLogsSenderRole | Security (404068503087) | logs:PutLogEvents | CloudWatch Logs |
-| SecurityLakeQueryRole | Security (404068503087) | s3:GetObject | Security Lake bucket |
-| GuardDutyMemberRole | Security (404068503087) | guardduty:GetFindings | GuardDuty findings |
-| SecurityHubMemberRole | Security (404068503087) | securityhub:GetFindings | Security Hub findings |
+| Role                     | Target Account          | Permission              | Resource              |
+| ------------------------ | ----------------------- | ----------------------- | --------------------- |
+| CloudWatchLogsSenderRole | Security (404068503087) | logs:PutLogEvents       | CloudWatch Logs       |
+| SecurityLakeQueryRole    | Security (404068503087) | s3:GetObject            | Security Lake bucket  |
+| GuardDutyMemberRole      | Security (404068503087) | guardduty:GetFindings   | GuardDuty findings    |
+| SecurityHubMemberRole    | Security (404068503087) | securityhub:GetFindings | Security Hub findings |
 
 ---
 
@@ -230,6 +234,7 @@ After roles are created, accept invitations from security account:
 ## 🧪 Testing Cross-Account Access
 
 ### Test 1: Terraform Role
+
 ```bash
 # From management account
 aws sts assume-role \
@@ -239,6 +244,7 @@ aws sts assume-role \
 ```
 
 ### Test 2: GuardDuty Member Role
+
 ```bash
 # From security account
 aws sts assume-role \
@@ -248,6 +254,7 @@ aws sts assume-role \
 ```
 
 ### Test 3: Security Hub Member Role
+
 ```bash
 # From security account
 aws sts assume-role \
@@ -256,6 +263,7 @@ aws sts assume-role \
 ```
 
 ### Test 4: Config Aggregate Authorization
+
 ```bash
 # From security account
 aws configservice describe-aggregate-authorization-status \
@@ -268,6 +276,7 @@ aws configservice describe-aggregate-authorization-status \
 ## 📝 Next Steps After Deployment
 
 ### 1. Configure CloudTrail to Security Account
+
 ```bash
 # Create trail pointing to security account bucket
 aws cloudtrail create-trail \
@@ -282,6 +291,7 @@ aws cloudtrail start-logging --name workload-account-trail
 ```
 
 ### 2. Configure VPC Flow Logs to Security Account
+
 ```hcl
 # Add to your VPC module
 resource "aws_flow_log" "workload_vpc" {
@@ -294,6 +304,7 @@ resource "aws_flow_log" "workload_vpc" {
 ```
 
 ### 3. Enable GuardDuty
+
 ```bash
 # Enable GuardDuty detector
 aws guardduty create-detector --enable
@@ -306,6 +317,7 @@ aws guardduty accept-invitation \
 ```
 
 ### 4. Enable Security Hub
+
 ```bash
 # Enable Security Hub
 aws securityhub enable-security-hub
@@ -317,6 +329,7 @@ aws securityhub accept-administrator-invitation \
 ```
 
 ### 5. Enable Config
+
 ```bash
 # Enable Config
 aws configservice put-configuration-recorder \
@@ -345,7 +358,7 @@ detective_member_role_arn = "arn:aws:iam::290793900072:role/DetectiveMemberRole"
 
 cross_account_roles_summary = {
   terraform_execution = {
-    arn = "arn:aws:iam::290793900072:role/TerraformExecutionRole"
+    arn = "arn:aws:iam::555555666666:role/TerraformExecutionRole"
     name = "TerraformExecutionRole"
   }
   guardduty_member = {
@@ -363,6 +376,7 @@ cross_account_roles_summary = {
 ### Issue: "Access Denied" when security account assumes role
 
 **Solution**: Check external ID in trust policy:
+
 ```bash
 aws iam get-role --role-name GuardDutyMemberRole
 ```
@@ -370,6 +384,7 @@ aws iam get-role --role-name GuardDutyMemberRole
 ### Issue: "Config aggregate authorization not found"
 
 **Solution**: Recreate authorization:
+
 ```bash
 terraform taint aws_config_aggregate_authorization.security_account
 terraform apply
@@ -378,6 +393,7 @@ terraform apply
 ### Issue: "GuardDuty invitation not received"
 
 **Solution**: Security account must send invitation first:
+
 ```bash
 # From security account
 aws guardduty invite-members \

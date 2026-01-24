@@ -3,13 +3,13 @@
 ############################
 resource "aws_security_group" "rds" {
   name        = "${var.env}-rds-sg"
-  description = "Security group for RDS PostgreSQL - allows traffic from EKS cluster"
+  description = "Security group for RDS SQL Server - allows traffic from EKS cluster"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "PostgreSQL from EKS cluster"
-    from_port       = 5432
-    to_port         = 5432
+    description     = "SQL Server from EKS cluster"
+    from_port       = 1433
+    to_port         = 1433
     protocol        = "tcp"
     security_groups = [var.eks_cluster_security_group_id]
   }
@@ -49,10 +49,14 @@ module "rds" {
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 6.0"
 
-  identifier     = "${var.env}-db"
-  engine         = "postgres"
-  engine_version = var.db_engine_version
-  instance_class = var.db_instance_class
+  identifier           = "${var.env}-db"
+  engine               = "sqlserver-se"
+  engine_version       = var.db_engine_version
+  major_engine_version = "16.00"
+  instance_class       = var.db_instance_class
+  family               = "sqlserver-se-16.0"
+  license_model        = "license-included"
+  timezone             = "GMT Standard Time"
 
   # Storage Configuration
   allocated_storage = var.db_allocated_storage
@@ -71,15 +75,15 @@ module "rds" {
   backup_retention_period         = 35
   backup_window                   = "03:00-04:00"
   maintenance_window              = "sun:04:00-sun:05:00"
-  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+  enabled_cloudwatch_logs_exports = ["error", "agent"]
 
   # High Availability
   multi_az = true
 
   # Database Configuration
-  db_name  = "${var.env}db"
+  # db_name is not supported for SQL Server (no initial db created)
   username = "dbadmin"
-  port     = "5432"
+  port     = "1433"
 
   # Performance Insights
   performance_insights_enabled          = true
@@ -92,19 +96,8 @@ module "rds" {
   final_snapshot_identifier_prefix = "${var.env}-db-final-snapshot"
 
   tags = {
-    Name        = "${var.env}-rds-postgres"
+    Name        = "${var.env}-rds-sqlserver"
     Environment = var.env
     Backup      = "true"
   }
 }
-
-# S3 with Versioning & Encryption (duplicate definition, keeping this one)
-# The s3.tf file has the actual backup bucket, commenting this out
-# resource "aws_s3_bucket" "backups" {
-#   bucket = "${var.env}-bank-backups"
-# }
-
-# resource "aws_s3_bucket_versioning" "v" {
-#   bucket = aws_s3_bucket.backups.id
-#   versioning_configuration { status = "Enabled" }
-# }

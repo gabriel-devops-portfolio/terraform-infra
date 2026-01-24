@@ -3,20 +3,6 @@
 # Purpose: Real-time monitoring, alerting, and visualization
 ############################################
 
-terraform {
-  required_version = ">= 1.5.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.0"
-    }
-  }
-}
-
 ############################################
 # Data Sources
 ############################################
@@ -28,7 +14,7 @@ data "aws_region" "current" {}
 ############################################
 locals {
   security_account_id = data.aws_caller_identity.current.account_id
-  region              = data.aws_region.current.name
+  region              = data.aws_region.current.id
 
   common_tags = {
     ManagedBy   = "terraform"
@@ -98,7 +84,7 @@ resource "random_password" "opensearch_admin" {
 
 # Store password in Secrets Manager
 resource "aws_secretsmanager_secret" "opensearch_admin" {
-  name        = "opensearch-admin-password"
+  name        = "opensearch-admin-password-v3" # Changed to avoid conflict with deleted secret
   description = "Admin password for OpenSearch domain"
 
   tags = merge(local.common_tags, {
@@ -119,11 +105,12 @@ resource "aws_opensearch_domain" "security_logs" {
   engine_version = "OpenSearch_2.11"
 
   cluster_config {
-    instance_type            = var.opensearch_instance_type
-    instance_count           = var.opensearch_instance_count
-    dedicated_master_enabled = true
+    instance_type  = var.opensearch_instance_type
+    instance_count = var.opensearch_instance_count
+    # Only enable dedicated masters for production (3+ nodes)
+    dedicated_master_enabled = var.opensearch_instance_count >= 3
     dedicated_master_type    = var.opensearch_master_type
-    dedicated_master_count   = 3
+    dedicated_master_count   = var.opensearch_instance_count >= 3 ? 3 : 0
     zone_awareness_enabled   = var.opensearch_instance_count > 1
 
     dynamic "zone_awareness_config" {
@@ -134,14 +121,8 @@ resource "aws_opensearch_domain" "security_logs" {
     }
 
     warm_enabled = var.enable_warm_storage
-    dynamic "warm_config" {
-      for_each = var.enable_warm_storage ? [1] : []
-      content {
-        warm_enabled = true
-        warm_type    = "ultrawarm1.medium.search"
-        warm_count   = 2
-      }
-    }
+    warm_type    = var.enable_warm_storage ? "ultrawarm1.medium.search" : null
+    warm_count   = var.enable_warm_storage ? 2 : null
   }
 
   ebs_options {
@@ -162,8 +143,9 @@ resource "aws_opensearch_domain" "security_logs" {
   }
 
   domain_endpoint_options {
-    enforce_https       = true
-    tls_security_policy = "Policy-Min-TLS-1-2-2019-07"
+    enforce_https           = true
+    tls_security_policy     = "Policy-Min-TLS-1-2-2019-07"
+    custom_endpoint_enabled = false
   }
 
   advanced_security_options {

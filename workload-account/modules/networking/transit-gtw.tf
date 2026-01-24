@@ -26,7 +26,8 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "workload" {
 resource "aws_ec2_transit_gateway_vpc_attachment" "egress" {
   transit_gateway_id = aws_ec2_transit_gateway.main.id
   vpc_id             = module.egress_vpc.vpc_id
-  subnet_ids         = slice(module.egress_vpc.intra_subnets, length(var.firewall_subnets), length(module.egress_vpc.intra_subnets))
+  # Since firewall subnets are now Private, intra subnets start at index 0 (they are just the tgw_subnets)
+  subnet_ids = module.egress_vpc.intra_subnets
 
   appliance_mode_support = "enable"
   dns_support            = "enable"
@@ -64,11 +65,11 @@ resource "aws_route_table" "tgw_subnets" {
 
 # TGW subnets route back to firewall for return traffic
 resource "aws_route" "tgw_subnets_to_firewall" {
-  for_each = local.firewall_endpoints
+  for_each = toset(var.azs)
 
   route_table_id         = aws_route_table.tgw_subnets.id
   destination_cidr_block = "0.0.0.0/0"
-  vpc_endpoint_id        = each.value
+  vpc_endpoint_id        = local.firewall_endpoints[each.value]
 
   depends_on = [aws_networkfirewall_firewall.egress]
 }
@@ -76,7 +77,7 @@ resource "aws_route" "tgw_subnets_to_firewall" {
 resource "aws_route_table_association" "tgw_subnets" {
   count = length(var.tgw_subnets)
 
-  subnet_id      = module.egress_vpc.intra_subnets[length(var.firewall_subnets) + count.index]
+  subnet_id      = module.egress_vpc.intra_subnets[count.index]
   route_table_id = aws_route_table.tgw_subnets.id
 }
 
@@ -94,12 +95,28 @@ resource "aws_ec2_transit_gateway_route_table" "inspection" {
 ############################
 # TGW Routes → Firewall Endpoints
 ############################
-resource "aws_route" "tgw_to_firewall" {
-  for_each = local.firewall_endpoints
-
-  route_table_id         = module.egress_vpc.intra_route_table_ids[index(var.azs, each.key)]
+# TGW Routes → Firewall Endpoints
+# TGW Routes → Firewall Endpoints (Explicit per AZ to avoid index issues)
+resource "aws_route" "tgw_to_firewall_az0" {
+  route_table_id         = module.egress_vpc.intra_route_table_ids[0]
   destination_cidr_block = "0.0.0.0/0"
-  vpc_endpoint_id        = each.value
+  vpc_endpoint_id        = local.firewall_endpoints[var.azs[0]]
+
+  depends_on = [aws_networkfirewall_firewall.egress]
+}
+
+resource "aws_route" "tgw_to_firewall_az1" {
+  route_table_id         = module.egress_vpc.intra_route_table_ids[1]
+  destination_cidr_block = "0.0.0.0/0"
+  vpc_endpoint_id        = local.firewall_endpoints[var.azs[1]]
+
+  depends_on = [aws_networkfirewall_firewall.egress]
+}
+
+resource "aws_route" "tgw_to_firewall_az2" {
+  route_table_id         = module.egress_vpc.intra_route_table_ids[2]
+  destination_cidr_block = "0.0.0.0/0"
+  vpc_endpoint_id        = local.firewall_endpoints[var.azs[2]]
 
   depends_on = [aws_networkfirewall_firewall.egress]
 }
@@ -130,7 +147,7 @@ resource "aws_ec2_transit_gateway_route" "default_to_egress" {
 
 # Return path → workload VPC (ALWAYS present)
 resource "aws_ec2_transit_gateway_route" "return_to_workload" {
-  destination_cidr_block         = module.workload_vpc.vpc_cidr
+  destination_cidr_block         = module.workload_vpc.vpc_cidr_block
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.inspection.id
   transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.workload.id
 }

@@ -4,8 +4,8 @@
 ############################################
 
 output "terraform_state_custom_source_arn" {
-  description = "ARN of the Terraform State Access custom source in Security Lake"
-  value       = aws_securitylake_custom_log_source.terraform_state_access.arn
+  description = "ID of the Terraform State Access custom source in Security Lake"
+  value       = aws_securitylake_custom_log_source.terraform_state_access.id
 }
 
 output "lambda_function_arn" {
@@ -29,7 +29,7 @@ output "custom_sources" {
     terraform_state_access = {
       name    = aws_securitylake_custom_log_source.terraform_state_access.source_name
       version = aws_securitylake_custom_log_source.terraform_state_access.source_version
-      arn     = aws_securitylake_custom_log_source.terraform_state_access.arn
+      id      = aws_securitylake_custom_log_source.terraform_state_access.id
     }
   }
 }

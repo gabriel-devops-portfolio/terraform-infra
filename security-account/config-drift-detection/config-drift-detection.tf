@@ -3,88 +3,89 @@
 ############################################
 
 ############################################
-# Config S3 Bucket
+# Data Sources
 ############################################
-resource "aws_s3_bucket" "config_logs" {
+data "aws_caller_identity" "current" {}
+
+############################################
+# Config S3 Bucket - Use existing CloudTrail bucket
+############################################
+data "aws_s3_bucket" "config_logs" {
   bucket = var.config_bucket_name
-
-  tags = {
-    Name        = "aws-config-logs"
-    Environment = "prod"
-    Account     = "security"
-  }
 }
 
-resource "aws_s3_bucket_versioning" "config_logs" {
-  bucket = aws_s3_bucket.config_logs.id
+# Note: Using existing CloudTrail bucket for Config logs
+# Bucket versioning, encryption, and public access block are already configured
+# resource "aws_s3_bucket_versioning" "config_logs" {
+#   bucket = data.aws_s3_bucket.config_logs.id
+#   versioning_configuration {
+#     status = "Enabled"
+#   }
+# }
 
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
+# resource "aws_s3_bucket_server_side_encryption_configuration" "config_logs" {
+#   bucket = data.aws_s3_bucket.config_logs.id
+#   rule {
+#     apply_server_side_encryption_by_default {
+#       sse_algorithm = "AES256"
+#     }
+#   }
+# }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "config_logs" {
-  bucket = aws_s3_bucket.config_logs.id
+# resource "aws_s3_bucket_public_access_block" "config_logs" {
+#   bucket = data.aws_s3_bucket.config_logs.id
+#   block_public_acls       = true
+#   block_public_policy     = true
+#   ignore_public_acls      = true
+#   restrict_public_buckets = true
+# }
 
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "config_logs" {
-  bucket = aws_s3_bucket.config_logs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_policy" "config_logs" {
-  bucket = aws_s3_bucket.config_logs.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AWSConfigBucketPermissionsCheck"
-        Effect = "Allow"
-        Principal = {
-          Service = "config.amazonaws.com"
-        }
-        Action = [
-          "s3:GetBucketAcl",
-          "s3:ListBucket"
-        ]
-        Resource = aws_s3_bucket.config_logs.arn
-        Condition = {
-          StringEquals = {
-            "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-        }
-      },
-      {
-        Sid    = "AWSConfigBucketWrite"
-        Effect = "Allow"
-        Principal = {
-          Service = "config.amazonaws.com"
-        }
-        Action   = "s3:PutObject"
-        Resource = "${aws_s3_bucket.config_logs.arn}/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl"      = "bucket-owner-full-control"
-            "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-        }
-      }
-    ]
-  })
-
-  depends_on = [aws_s3_bucket_public_access_block.config_logs]
-}
+# Note: Bucket policy is managed by the cross-account-roles module
+# The CloudTrail bucket already has appropriate permissions for Config
+# If Config-specific permissions are needed, they should be added to the
+# cross-account-roles module's bucket policy, not managed here
+#
+# resource "aws_s3_bucket_policy" "config_logs" {
+#   bucket = data.aws_s3_bucket.config_logs.id
+#
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Sid    = "AWSConfigBucketPermissionsCheck"
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "config.amazonaws.com"
+#         }
+#         Action = [
+#           "s3:GetBucketAcl",
+#           "s3:ListBucket"
+#         ]
+#         Resource = data.aws_s3_bucket.config_logs.arn
+#         Condition = {
+#           StringEquals = {
+#             "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
+#           }
+#         }
+#       },
+#       {
+#         Sid    = "AWSConfigBucketWrite"
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "config.amazonaws.com"
+#         }
+#         Action   = "s3:PutObject"
+#         Resource = "${data.aws_s3_bucket.config_logs.arn}/*"
+#         Condition = {
+#           StringEquals = {
+#             "s3:x-amz-acl"      = "bucket-owner-full-control"
+#             "AWS:SourceAccount" = data.aws_caller_identity.current.account_id
+#           }
+#         }
+#       }
+#     ]
+#   })
+# }
 
 ############################################
 # Config Recorder
@@ -104,9 +105,9 @@ resource "aws_config_configuration_recorder" "this" {
 ############################################
 resource "aws_config_delivery_channel" "this" {
   name           = "org-config-delivery"
-  s3_bucket_name = aws_s3_bucket.config_logs.id
+  s3_bucket_name = data.aws_s3_bucket.config_logs.id
 
-  depends_on = [aws_s3_bucket_policy.config_logs]
+  depends_on = [aws_config_configuration_recorder.this]
 }
 
 ############################################
@@ -153,8 +154,8 @@ resource "aws_iam_role_policy" "config_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.config_logs.arn,
-          "${aws_s3_bucket.config_logs.arn}/*"
+          data.aws_s3_bucket.config_logs.arn,
+          "${data.aws_s3_bucket.config_logs.arn}/*"
         ]
       },
       {

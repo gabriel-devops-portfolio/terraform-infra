@@ -39,7 +39,7 @@ Production-grade AWS multi-account infrastructure managed with Terraform, implem
 │  │                     │              │                      │             │
 │  │  ┌───────────────┐  │              │  ┌────────────────┐ │             │
 │  │  │ Security Acct │  │              │  │ Workload Acct  │ │             │
-│  │  │ 404068503087  │  │              │  │ 290793900072   │ │             │
+│  │  │ 333333444444  │  │              │  │ 555555666666   │ │             │
 │  │  │               │  │              │  │                │ │             │
 │  │  │ • CloudTrail  │  │              │  │ ┌────────────┐ │ │             │
 │  │  │ • GuardDuty   │  │              │  │ │ Spoke VPC  │ │ │             │
@@ -208,15 +208,16 @@ terraform-infra/
 
 ### Accounts
 
-| Account Type | Account ID | Purpose | Key Services |
-|-------------|-----------|---------|--------------|
-| **Management** | Root | Organization admin | AWS Organizations, SCPs |
-| **Security** | 404068503087 | Security & compliance | CloudTrail, GuardDuty, SecurityHub, Config |
-| **Workload** | 290793900072 | Application runtime | EKS, RDS, VPC, ArgoCD |
+| Account Type   | Account ID   | Purpose               | Key Services                               |
+| -------------- | ------------ | --------------------- | ------------------------------------------ |
+| **Management** | Root         | Organization admin    | AWS Organizations, SCPs                    |
+| **Security**   | 333333444444 | Security & compliance | CloudTrail, GuardDuty, SecurityHub, Config |
+| **Workload**   | 555555666666 | Application runtime   | EKS, RDS, VPC, ArgoCD                      |
 
 ### Cross-Account Roles
 
 #### Security Account (10 Roles)
+
 1. **TerraformExecutionRole** - Infrastructure automation
 2. **GuardDutyOrganizationAdminRole** - Threat detection
 3. **SecurityHubOrganizationAdminRole** - Security findings
@@ -229,6 +230,7 @@ terraform-infra/
 10. **OpenSearchSecurityRole** - Log visualization
 
 #### Workload Account (8 Roles)
+
 1. **TerraformExecutionRole** - Terraform operations
 2. **GuardDutyMemberRole** - GuardDuty integration
 3. **SecurityHubMemberRole** - SecurityHub integration
@@ -250,6 +252,7 @@ All logs flow to the Security Account in OCSF 1.1.0 format:
 - 📊 **Athena Query Results** (90-day retention)
 
 **Unified Analytics:**
+
 - **OpenSearch**: Real-time OCSF dashboards, alerting, and visualization
 - **Athena**: SQL queries with multi-source correlation (11 pre-built OCSF queries)
 - **Security Lake Subscriber**: Grants OpenSearch direct S3 access to OCSF data (~$1/month)
@@ -260,45 +263,11 @@ All logs flow to the Security Account in OCSF 1.1.0 format:
 
 ### Hub-and-Spoke Topology
 
-```
-┌─────────────────────────────────────────────────────┐
-│              Workload VPC (Spoke)                   │
-│              CIDR: 10.0.0.0/16                      │
-│                                                      │
-│  ┌──────────────┐  ┌──────────────┐                │
-│  │   Private    │  │   Database   │                │
-│  │   Subnets    │  │   Subnets    │                │
-│  │ • EKS Nodes  │  │ • RDS        │                │
-│  │ • Apps       │  │ • ElastiCache│                │
-│  └──────┬───────┘  └──────────────┘                │
-│         │                                            │
-│         └─────────────┬──────────────────┐          │
-│                       │                  │          │
-│              ┌────────▼───────┐          │          │
-│              │ Transit Gateway│          │          │
-│              └────────┬───────┘          │          │
-│                       │                  │          │
-└───────────────────────┼──────────────────┼──────────┘
-                        │                  │
-┌───────────────────────▼──────────────────▼──────────┐
-│               Egress VPC (Hub)                       │
-│               CIDR: 10.1.0.0/16                      │
-│                                                      │
-│  ┌──────────────┐  ┌──────────────┐                │
-│  │   Public     │  │   Firewall   │                │
-│  │   Subnets    │  │   Subnets    │                │
-│  │ • NAT GW     │  │ • AWS Network│                │
-│  │ • ALB        │  │   Firewall   │                │
-│  └──────────────┘  └──────────────┘                │
-│                                                      │
-│          Internet Gateway                           │
-└──────────────────┬──────────────────────────────────┘
-                   │
-                   ▼
-              INTERNET
-```
+![Networking Architecture](./networking-architecture.png)
+
 
 **Key Features:**
+
 - Multi-AZ deployment for high availability
 - Network Firewall for outbound traffic inspection
 - Transit Gateway for scalable VPC connectivity
@@ -312,6 +281,7 @@ All logs flow to the Security Account in OCSF 1.1.0 format:
 ### Production Environment
 
 **EKS Cluster Configuration:**
+
 - Kubernetes Version: 1.28
 - Node Groups: 2 managed node groups (3-10 nodes)
 - Instance Types: t3.medium, t3.large
@@ -320,12 +290,14 @@ All logs flow to the Security Account in OCSF 1.1.0 format:
 - OIDC Provider: Enabled for IRSA (IAM Roles for Service Accounts)
 
 **Data Layer:**
+
 - RDS PostgreSQL (Multi-AZ)
 - S3 buckets with versioning and encryption
 - KMS encryption at rest for all data
 - Automated daily backups with 7-day retention
 
 **Network Architecture:**
+
 - Private subnets for EKS nodes and RDS
 - Database subnets isolated from application layer
 - Transit Gateway attachment to Egress VPC (Hub)
@@ -335,6 +307,7 @@ All logs flow to the Security Account in OCSF 1.1.0 format:
 ### Staging Environment
 
 Mirrors production architecture with scaled-down resources for testing:
+
 - Smaller EKS node groups (2-5 nodes)
 - Single-AZ RDS instance (db.t3.small)
 - Reduced storage and backup retention
@@ -346,16 +319,16 @@ Mirrors production architecture with scaled-down resources for testing:
 
 Reusable, production-ready infrastructure modules:
 
-| Module | Purpose | Key Resources |
-|--------|---------|---------------|
-| `networking` | Hub-spoke VPC architecture | VPC, TGW, NAT, subnets, route tables |
-| `eks` | EKS cluster setup | EKS cluster, node groups, add-ons, OIDC |
-| `data` | Data persistence layer | RDS, S3, security groups, backup policies |
-| `security` | Security controls | KMS keys, security groups, NACLs |
-| `kms` | Encryption keys | KMS keys with rotation, aliases, policies |
-| `acm` | SSL/TLS certificates | ACM certificates, DNS validation |
-| `eks-roles` | Kubernetes RBAC | ClusterRoles, RoleBindings, ServiceAccounts |
-| `irsa` | IAM roles for K8s | IAM roles with OIDC provider trust |
+| Module       | Purpose                    | Key Resources                               |
+| ------------ | -------------------------- | ------------------------------------------- |
+| `networking` | Hub-spoke VPC architecture | VPC, TGW, NAT, subnets, route tables        |
+| `eks`        | EKS cluster setup          | EKS cluster, node groups, add-ons, OIDC     |
+| `data`       | Data persistence layer     | RDS, S3, security groups, backup policies   |
+| `security`   | Security controls          | KMS keys, security groups, NACLs            |
+| `kms`        | Encryption keys            | KMS keys with rotation, aliases, policies   |
+| `acm`        | SSL/TLS certificates       | ACM certificates, DNS validation            |
+| `eks-roles`  | Kubernetes RBAC            | ClusterRoles, RoleBindings, ServiceAccounts |
+| `irsa`       | IAM roles for K8s          | IAM roles with OIDC provider trust          |
 
 ---
 
@@ -366,12 +339,14 @@ Reusable, production-ready infrastructure modules:
 All security data normalized to Open Cybersecurity Schema Framework (OCSF) format:
 
 **OCSF Classes:**
+
 - **4001**: Network Activity (VPC Flow Logs)
 - **3005**: API Activity (CloudTrail, Terraform State Logs)
 - **2001**: Security Finding (GuardDuty, Config, Inspector, Macie via Security Hub)
 - **4003**: DNS Activity (Route 53 Resolver Logs)
 
 **Benefits:**
+
 - ✅ Unified field names across all security tools (OpenSearch, Athena)
 - ✅ Multi-source correlation in single queries (VPC + CloudTrail + Security Hub)
 - ✅ Industry-standard schema for SIEM integration
@@ -409,6 +384,7 @@ All security data normalized to Open Cybersecurity Schema Framework (OCSF) forma
 ## 🎯 Production Readiness Checklist
 
 ### Infrastructure ✅
+
 - [x] Multi-account AWS Organization deployed
 - [x] Service Control Policies (SCPs) applied
 - [x] Cross-account IAM roles configured
@@ -419,6 +395,7 @@ All security data normalized to Open Cybersecurity Schema Framework (OCSF) forma
 - [x] KMS encryption for all data at rest
 
 ### Security ✅
+
 - [x] Root account protected with production-grade SCP
 - [x] MFA enforced for production operations
 - [x] CloudTrail logging to centralized security account
@@ -434,6 +411,7 @@ All security data normalized to Open Cybersecurity Schema Framework (OCSF) forma
 - [x] SOC alerting with SNS/SQS
 
 ### Monitoring ✅
+
 - [x] CloudWatch dashboards for EKS, RDS, VPC
 - [x] CloudWatch alarms for critical metrics
 - [x] GuardDuty high-severity alert routing
@@ -443,6 +421,7 @@ All security data normalized to Open Cybersecurity Schema Framework (OCSF) forma
 - [x] OpenSearch dashboards for security insights
 
 ### Documentation ✅
+
 - [x] Architecture diagrams
 - [x] Deployment procedures
 - [x] Runbooks for incident response
@@ -487,6 +466,7 @@ All runbooks located in `security-detections/runbooks/`:
 ### Routine Maintenance
 
 #### Weekly Tasks
+
 - Review GuardDuty findings and triage threats
 - Check SecurityHub compliance score trends
 - Review Config rule violations
@@ -494,6 +474,7 @@ All runbooks located in `security-detections/runbooks/`:
 - Verify backup completion for RDS/S3
 
 #### Monthly Tasks
+
 - Review and update IAM policies
 - Audit cross-account role usage
 - Review S3 bucket policies and access logs
@@ -502,6 +483,7 @@ All runbooks located in `security-detections/runbooks/`:
 - Test disaster recovery procedures
 
 #### Quarterly Tasks
+
 - Security assessment with external auditor
 - Review and update SCP policies
 - Rotate KMS keys (automated but verify)
@@ -552,7 +534,7 @@ psql -h <rds-endpoint> -U admin -d mydb
 kubectl run test-pod --image=busybox --rm -it -- ping 8.8.8.8
 
 # Cross-account role assumption
-aws sts assume-role --role-arn arn:aws:iam::404068503087:role/WorkloadReadOnlyRole --role-session-name test
+aws sts assume-role --role-arn arn:aws:iam::333333444444:role/WorkloadReadOnlyRole --role-session-name test
 
 # Security services validation
 aws guardduty list-detectors
@@ -571,7 +553,7 @@ bash test-admin-access.sh
 aws s3 ls  # Should fail without MFA in production
 
 # Test unauthorized access
-aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
+aws s3 cp test.txt s3://cloudtrail-logs-333333444444/  # Should deny
 ```
 
 ---
@@ -591,31 +573,32 @@ aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 
 ### Monthly Cost Estimates
 
-| Service | Configuration | Estimated Cost |
-|---------|--------------|----------------|
-| EKS Cluster | 1 cluster | $73/month |
-| EC2 (EKS nodes) | 3x t3.medium | $90/month |
-| RDS PostgreSQL | db.t3.medium Multi-AZ | $120/month |
-| S3 (logs, backups) | 500 GB standard | $12/month |
-| CloudTrail | Organization trail | $5/month |
-| GuardDuty | 1 account | $30/month |
-| Security Lake | 1TB OCSF data + lifecycle | $25/month |
-| Security Lake Subscriber | OpenSearch access | $1/month |
-| OpenSearch | 3x r6g.xlarge nodes | $750/month |
-| OpenSearch EBS | 3x 200GB gp3 | $90/month |
-| Athena | ~100GB OCSF queries | $5/month |
-| Glue Crawler | 6 runs/day | $2/month |
-| NAT Gateway | 1 gateway | $35/month |
-| Transit Gateway | 2 attachments | $70/month |
-| **Total (Production)** | | **~$1,308/month** |
+| Service                  | Configuration             | Estimated Cost    |
+| ------------------------ | ------------------------- | ----------------- |
+| EKS Cluster              | 1 cluster                 | $73/month         |
+| EC2 (EKS nodes)          | 3x t3.medium              | $90/month         |
+| RDS PostgreSQL           | db.t3.medium Multi-AZ     | $120/month        |
+| S3 (logs, backups)       | 500 GB standard           | $12/month         |
+| CloudTrail               | Organization trail        | $5/month          |
+| GuardDuty                | 1 account                 | $30/month         |
+| Security Lake            | 1TB OCSF data + lifecycle | $25/month         |
+| Security Lake Subscriber | OpenSearch access         | $1/month          |
+| OpenSearch               | 3x r6g.xlarge nodes       | $750/month        |
+| OpenSearch EBS           | 3x 200GB gp3              | $90/month         |
+| Athena                   | ~100GB OCSF queries       | $5/month          |
+| Glue Crawler             | 6 runs/day                | $2/month          |
+| NAT Gateway              | 1 gateway                 | $35/month         |
+| Transit Gateway          | 2 attachments             | $70/month         |
+| **Total (Production)**   |                           | **~$1,308/month** |
 
-*Note: Security Lake + OpenSearch add ~$873/month for centralized OCSF analytics*
+_Note: Security Lake + OpenSearch add ~$873/month for centralized OCSF analytics_
 
 ---
 
 ## 🔐 Security Best Practices Implemented
 
 ### Identity & Access Management
+
 ✅ Least privilege IAM policies with explicit deny
 ✅ Cross-account roles instead of IAM users
 ✅ MFA required for production operations
@@ -624,6 +607,7 @@ aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 ✅ No long-term access keys (temporary credentials only)
 
 ### Data Protection
+
 ✅ Encryption at rest with KMS (S3, RDS, EBS)
 ✅ Encryption in transit with TLS 1.2+ enforced
 ✅ S3 bucket public access blocked by default
@@ -632,6 +616,7 @@ aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 ✅ Cross-region replication for disaster recovery
 
 ### Network Security
+
 ✅ Private subnets for all workloads (no direct internet)
 ✅ Hub-and-spoke topology with centralized egress
 ✅ Network Firewall for outbound traffic inspection (optional)
@@ -641,6 +626,7 @@ aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 ✅ Transit Gateway for secure inter-VPC routing
 
 ### Monitoring & Detection
+
 ✅ CloudTrail organization trail with 365-day retention
 ✅ GuardDuty threat detection (S3, EKS protection)
 ✅ SecurityHub compliance monitoring (CIS, PCI-DSS)
@@ -651,6 +637,7 @@ aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 ✅ DLQ monitoring to ensure no alerts are lost
 
 ### Compliance & Governance
+
 ✅ Service Control Policies (SCPs) for organizational boundaries
 ✅ Multi-account isolation (security, workload separation)
 ✅ Centralized audit logging to security account
@@ -677,13 +664,13 @@ aws s3 cp test.txt s3://cloudtrail-logs-404068503087/  # Should deny
 
 ### Backup Strategy
 
-| Resource | Frequency | Retention | Cross-Region |
-|----------|-----------|-----------|--------------|
-| RDS Snapshots | Daily | 7 days | Yes (us-west-2) |
-| S3 Buckets | Continuous | Versioning | Yes (us-west-2) |
-| EKS Volumes | Daily (Velero) | 7 days | Yes |
-| Terraform State | On change | Versioned | Yes (us-west-2) |
-| CloudTrail Logs | Real-time | 365 days | Yes |
+| Resource        | Frequency      | Retention  | Cross-Region    |
+| --------------- | -------------- | ---------- | --------------- |
+| RDS Snapshots   | Daily          | 7 days     | Yes (us-west-2) |
+| S3 Buckets      | Continuous     | Versioning | Yes (us-west-2) |
+| EKS Volumes     | Daily (Velero) | 7 days     | Yes             |
+| Terraform State | On change      | Versioned  | Yes (us-west-2) |
+| CloudTrail Logs | Real-time      | 365 days   | Yes             |
 
 ### Recovery Procedures
 

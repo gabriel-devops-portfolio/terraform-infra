@@ -11,7 +11,7 @@ variable "name" {
 
 variable "type" {
   description = "(Required) The record type. Valid values are A, AAAA, CAA, CNAME, DS, MX, NAPTR, NS, PTR, SOA, SPF, SRV and TXT."
-  default     = "CNAME"
+  default     = "A"
 }
 
 variable "ttl" {

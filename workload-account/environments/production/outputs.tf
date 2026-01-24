@@ -1,19 +1,39 @@
+# Production Environment Outputs
+
 ############################
-# Networking Outputs
+# EKS Cluster Outputs
+############################
+output "cluster_id" {
+  description = "EKS cluster ID"
+  value       = module.kubernetes.cluster_id
+}
+
+output "cluster_arn" {
+  description = "EKS cluster ARN"
+  value       = module.kubernetes.cluster_arn
+}
+
+output "cluster_endpoint" {
+  description = "EKS cluster endpoint"
+  value       = module.kubernetes.cluster_endpoint
+}
+
+output "cluster_security_group_id" {
+  description = "EKS cluster security group ID"
+  value       = module.kubernetes.cluster_security_group_id
+}
+
+output "oidc_provider_arn" {
+  description = "EKS OIDC provider ARN"
+  value       = module.kubernetes.oidc_provider_arn
+}
+
+############################
+# Network Outputs
 ############################
 output "workload_vpc_id" {
   description = "Workload VPC ID"
   value       = module.network.workload_vpc_id
-}
-
-output "workload_vpc_cidr" {
-  description = "Workload VPC CIDR"
-  value       = module.network.workload_vpc_cidr
-}
-
-output "workload_private_subnets" {
-  description = "Workload private subnet IDs"
-  value       = module.network.workload_private_subnets
 }
 
 output "egress_vpc_id" {
@@ -21,86 +41,92 @@ output "egress_vpc_id" {
   value       = module.network.egress_vpc_id
 }
 
-output "transit_gateway_id" {
-  description = "Transit Gateway ID"
-  value       = module.network.tgw_id
-}
-
-output "network_firewall_name" {
-  description = "Network Firewall name"
-  value       = module.network.firewall_name
+output "workload_private_subnets" {
+  description = "Workload private subnet IDs"
+  value       = module.network.workload_private_subnets
 }
 
 ############################
-# EKS Cluster Outputs
+# Database Outputs
 ############################
-output "eks_cluster_id" {
-  description = "EKS cluster ID"
-  value       = module.kubernetes.cluster_id
-}
-
-output "eks_cluster_name" {
-  description = "EKS cluster name"
-  value       = local.cluster_name
-}
-
-output "eks_cluster_endpoint" {
-  description = "EKS cluster endpoint"
-  value       = module.kubernetes.cluster_endpoint
+output "rds_endpoint" {
+  description = "RDS endpoint"
+  value       = module.data.rds_endpoint
   sensitive   = true
 }
 
-output "eks_cluster_certificate_authority_data" {
-  description = "EKS cluster certificate authority data"
-  value       = module.kubernetes.cluster_certificate_authority_data
-  sensitive   = true
-}
-
-output "eks_oidc_provider_arn" {
-  description = "EKS OIDC provider ARN"
-  value       = module.kubernetes.oidc_provider_arn
-}
-
-output "eks_node_security_group_id" {
-  description = "EKS node security group ID"
-  value       = module.kubernetes.node_security_group_id
+output "rds_arn" {
+  description = "RDS ARN"
+  value       = module.data.rds_arn
 }
 
 ############################
-# KMS Outputs
+# EKS Backup Outputs
 ############################
-output "eks_kms_key_arn" {
-  description = "EKS KMS key ARN"
+output "eks_backup_velero_bucket_name" {
+  description = "Name of the S3 bucket for Velero backups"
+  value       = module.eks_backup.velero_bucket_name
+}
+
+output "eks_backup_velero_bucket_arn" {
+  description = "ARN of the S3 bucket for Velero backups"
+  value       = module.eks_backup.velero_bucket_arn
+}
+
+output "eks_backup_velero_iam_role_arn" {
+  description = "ARN of the IAM role for Velero"
+  value       = module.eks_backup.velero_iam_role_arn
+}
+
+output "eks_backup_etcd_bucket_name" {
+  description = "Name of the S3 bucket for ETCD backups"
+  value       = module.eks_backup.etcd_backup_bucket_name
+}
+
+output "eks_backup_etcd_bucket_arn" {
+  description = "ARN of the S3 bucket for ETCD backups"
+  value       = module.eks_backup.etcd_backup_bucket_arn
+}
+
+output "eks_backup_ebs_snapshot_lambda_role_arn" {
+  description = "ARN of the IAM role for EBS snapshot Lambda"
+  value       = module.eks_backup.ebs_snapshot_lambda_role_arn
+}
+
+output "eks_backup_log_group_name" {
+  description = "Name of the CloudWatch log group for backup operations"
+  value       = module.eks_backup.backup_log_group_name
+}
+
+output "eks_backup_failure_alarm_arn" {
+  description = "ARN of the CloudWatch alarm for backup failures"
+  value       = module.eks_backup.backup_failure_alarm_arn
+}
+
+############################
+# Disaster Recovery Outputs
+############################
+output "dr_backup_bucket_name" {
+  description = "Name of the disaster recovery backup bucket"
+  value       = aws_s3_bucket.dr_backups.bucket
+}
+
+output "dr_backup_bucket_arn" {
+  description = "ARN of the disaster recovery backup bucket"
+  value       = aws_s3_bucket.dr_backups.arn
+}
+
+output "dr_kms_key_arn" {
+  description = "ARN of the KMS key in the DR region"
+  value       = aws_kms_key.dr_region.arn
+}
+
+############################
+# Security Outputs
+############################
+output "kms_eks_key_arn" {
+  description = "ARN of the KMS key for EKS encryption"
   value       = module.kms.eks_kms_key_arn
-}
-
-############################
-# Route53 and ACM Outputs
-############################
-output "primary_zone_id" {
-  description = "Primary Route53 zone ID"
-  value       = aws_route53_zone.primary.zone_id
-}
-
-output "primary_zone_name_servers" {
-  description = "Primary Route53 zone name servers"
-  value       = aws_route53_zone.primary.name_servers
-}
-
-output "acm_certificate_arn" {
-  description = "ACM certificate ARN"
-  value       = aws_acm_certificate.eks_cert.arn
-}
-
-output "acm_certificate_status" {
-  description = "ACM certificate validation status"
-  value       = aws_acm_certificate.eks_cert.status
-}
-
-output "acm_certificate_domain_validation_options" {
-  description = "ACM certificate domain validation options"
-  value       = aws_acm_certificate.eks_cert.domain_validation_options
-  sensitive   = true
 }
 
 ############################
@@ -111,95 +137,44 @@ output "argocd_namespace" {
   value       = "argocd"
 }
 
-output "argocd_url" {
-  description = "ArgoCD URL"
-  value       = "https://argocd.${var.domain_name}"
+############################
+# OpenSearch Outputs (for Jaeger Tracing)
+############################
+output "opensearch_domain_arn" {
+  description = "ARN of the OpenSearch domain"
+  value       = module.opensearch.opensearch_domain_arn
 }
 
-############################
-# Data Module Outputs
-############################
-output "backup_bucket_name" {
-  description = "S3 backup bucket name"
-  value       = module.data.backup_bucket_name
+output "opensearch_domain_name" {
+  description = "Name of the OpenSearch domain"
+  value       = module.opensearch.opensearch_domain_name
 }
 
-output "backup_bucket_arn" {
-  description = "S3 backup bucket ARN"
-  value       = module.data.backup_bucket_arn
+output "opensearch_endpoint" {
+  description = "OpenSearch domain endpoint"
+  value       = module.opensearch.opensearch_endpoint
 }
 
-############################
-# RDS Outputs
-############################
-output "rds_endpoint" {
-  description = "RDS instance endpoint"
-  value       = module.data.rds_endpoint
+output "jaeger_elasticsearch_role_arn" {
+  description = "ARN of the IAM role for Jaeger to access OpenSearch"
+  value       = module.opensearch.jaeger_elasticsearch_role_arn
+}
+
+output "jaeger_helm_values" {
+  description = "Helm values for Jaeger deployment"
+  value       = module.opensearch.jaeger_helm_values
   sensitive   = true
 }
 
-output "rds_instance_id" {
-  description = "RDS instance ID"
-  value       = module.data.rds_instance_id
-}
-
-output "rds_database_name" {
-  description = "RDS database name"
-  value       = module.data.rds_database_name
-}
-
-output "rds_security_group_id" {
-  description = "RDS security group ID"
-  value       = module.data.rds_security_group_id
-}
-
-output "rds_arn" {
-  description = "RDS instance ARN"
-  value       = module.data.rds_arn
-}
-
 ############################
-# Disaster Recovery Outputs
+# Route53 Outputs
 ############################
-output "dr_region" {
-  description = "Disaster recovery region"
-  value       = var.dr_region
+output "route53_zone_id" {
+  description = "Route53 hosted zone ID"
+  value       = aws_route53_zone.primary.zone_id
 }
 
-output "dr_kms_key_arn" {
-  description = "DR region KMS key ARN"
-  value       = aws_kms_key.dr_region.arn
-}
-
-output "dr_backup_bucket_name" {
-  description = "DR region S3 backup bucket name"
-  value       = aws_s3_bucket.dr_backups.id
-}
-
-output "dr_backup_bucket_arn" {
-  description = "DR region S3 backup bucket ARN"
-  value       = aws_s3_bucket.dr_backups.arn
-}
-
-output "dr_rds_backup_replication_id" {
-  description = "RDS automated backup replication ID in DR region"
-  value       = aws_db_instance_automated_backups_replication.replica.id
-}
-
-output "s3_replication_role_arn" {
-  description = "S3 cross-region replication IAM role ARN"
-  value       = aws_iam_role.replication.arn
-}
-
-output "dr_status" {
-  description = "Disaster recovery configuration status"
-  value = {
-    enabled               = var.enable_dr_replication
-    dr_region             = var.dr_region
-    rds_backup_replicated = true
-    s3_backup_replicated  = true
-    retention_days        = 35
-    rto_target            = "< 15 minutes"
-    rpo_target            = "< 5 minutes"
-  }
+output "route53_zone_name" {
+  description = "Route53 hosted zone name"
+  value       = aws_route53_zone.primary.name
 }

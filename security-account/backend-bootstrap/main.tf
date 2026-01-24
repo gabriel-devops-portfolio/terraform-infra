@@ -63,8 +63,8 @@ module "soc-alerting" {
 module "config-drift-detection" {
   source = "../config-drift-detection"
 
-  # Use the CloudTrail logs bucket for Config data
-  config_bucket_name = module.cross-account-role.cloudtrail_logs_bucket_name
+  # Use the Security Lake data bucket for Config data (centralized security logs)
+  config_bucket_name = module.cross-account-role.security_lake_data_bucket_name
 
   depends_on = [module.cross-account-role]
 }
@@ -72,7 +72,7 @@ module "config-drift-detection" {
 ############################################
 # Security Lake Custom Sources Module
 # Depends on: security-lake (for data lake), cross-account-role (for S3 buckets and KMS)
-# Purpose: Transform VPC Flow Logs and Terraform State access logs to OCSF format
+# Purpose: Transform Terraform State access logs to OCSF format
 ############################################
 module "security-lake-custom-sources" {
   source = "../security-lake-custom-sources"

@@ -21,7 +21,7 @@ output "rds_endpoint" {
 
 output "rds_instance_id" {
   description = "RDS instance ID"
-  value       = module.rds.db_instance_id
+  value       = module.rds.db_instance_identifier
 }
 
 output "rds_database_name" {

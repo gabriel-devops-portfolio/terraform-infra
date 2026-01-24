@@ -4,11 +4,20 @@ output "test-oz" {
 }
 
 resource "aws_kms_key" "eks" {
-  description         = "KMS Key for ${var.environment}"
+  description         = "KMS Key for EKS ${var.environment}"
   enable_key_rotation = var.enable_key_rotation
   tags = {
     "Environment" : var.environment,
-    "Name" : format("%s-encryption-key", var.environment)
+    "Name" : format("%s-eks-encryption-key", var.environment)
+  }
+}
+
+resource "aws_kms_key" "s3" {
+  description         = "KMS Key for S3 ${var.environment}"
+  enable_key_rotation = var.enable_key_rotation
+  tags = {
+    "Environment" : var.environment,
+    "Name" : format("%s-s3-encryption-key", var.environment)
   }
 }
 

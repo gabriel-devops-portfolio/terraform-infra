@@ -69,7 +69,7 @@ resource "aws_iam_role_policy" "lambda_security_lake_write" {
           "securitylake:PutCustomLogData",
           "securitylake:GetCustomLogSource"
         ]
-        Resource = aws_securitylake_custom_log_source.terraform_state_access.arn
+        Resource = "*" # Custom log source doesn't have ARN, use wildcard with specific actions
       },
       {
         Sid    = "SecurityLakeS3Write"

@@ -11,6 +11,7 @@ terraform apply
 ```
 
 **This single command deploys ALL components in correct dependency order:**
+
 1. ✅ Cross-Account Roles (S3, IAM, KMS, CloudTrail)
 2. ✅ Security Lake (OCSF data lake, Glue, Athena)
 3. ✅ Athena Queries (7 named queries + 4 views)
@@ -24,14 +25,14 @@ terraform apply
 
 ## 📚 **Documentation**
 
-| Document | Purpose |
-|----------|---------|
-| **[UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md)** ⭐ | Complete step-by-step deployment guide |
-| **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** ⭐ | One-page command reference |
-| **[README.md](./README.md)** | Master documentation index |
-| **[IMPLEMENTATION-COMPLETE.md](./IMPLEMENTATION-COMPLETE.md)** | What's deployed and how it works |
-| **[OPENSEARCH-SNS-SETUP.md](./OPENSEARCH-SNS-SETUP.md)** | OpenSearch SNS integration |
-| **[soc-alerting/MONITOR-STATUS-SUMMARY.md](./soc-alerting/MONITOR-STATUS-SUMMARY.md)** | Monitor deployment checklist |
+| Document                                                                               | Purpose                                |
+| -------------------------------------------------------------------------------------- | -------------------------------------- |
+| **[UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md)** ⭐                    | Complete step-by-step deployment guide |
+| **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** ⭐                                      | One-page command reference             |
+| **[README.md](./README.md)**                                                           | Master documentation index             |
+| **[IMPLEMENTATION-COMPLETE.md](./IMPLEMENTATION-COMPLETE.md)**                         | What's deployed and how it works       |
+| **[OPENSEARCH-SNS-SETUP.md](./OPENSEARCH-SNS-SETUP.md)**                               | OpenSearch SNS integration             |
+| **[soc-alerting/MONITOR-STATUS-SUMMARY.md](./soc-alerting/MONITOR-STATUS-SUMMARY.md)** | Monitor deployment checklist           |
 
 ---
 
@@ -40,6 +41,7 @@ terraform apply
 ## 📦 **What Gets Deployed**
 
 ### **Security Lake Module**
+
 - Security Lake data lake with automatic AWS log source integrations
 - OCSF format standardization (CloudTrail, VPC Flow, GuardDuty, Route53)
 - S3 lifecycle policies (30d → IA → Glacier → Delete@365d)
@@ -48,6 +50,7 @@ terraform apply
 - Athena workgroup with 7 named queries + 4 views
 
 ### **OpenSearch Module**
+
 - 1-node OpenSearch cluster (t3.medium) - cost optimized for dev/test
 - KMS encryption at rest
 - TLS encryption in transit
@@ -57,12 +60,14 @@ terraform apply
 - SNS IAM role for alerting
 
 ### **SOC Alerting Module**
+
 - SNS topics (critical, high, medium severity)
 - Email subscriptions (captain.gab@protonmail.com)
 - DLQ monitoring
 - OpenSearch monitors ready to deploy
 
 ### **Cross-Account Roles**
+
 - S3 bucket access roles
 - IAM cross-account roles
 - KMS key access
@@ -73,6 +78,7 @@ terraform apply
 ## 🚀 **Quick Start - 5 Steps**
 
 ### **Step 1: Configure Variables** (2 minutes)
+
 ```bash
 cd security-account/backend-bootstrap
 
@@ -81,15 +87,17 @@ cat terraform.tfvars
 ```
 
 **Required variables:**
+
 ```hcl
-security_account_id = "404068503087"
-workload_account_id = "290793900072"
+security_account_id = "333333444444"
+workload_account_id = "555555666666"
 region             = "us-east-1"
 ```
 
 ---
 
 ### **Step 2: Deploy Everything** (15-20 minutes)
+
 ```bash
 terraform init
 terraform plan
@@ -101,6 +109,7 @@ terraform apply
 ---
 
 ### **Step 3: Confirm SNS Subscriptions** (2 minutes)
+
 Check email (captain.gab@protonmail.com) and confirm 3 SNS subscription emails.
 
 ```bash
@@ -111,6 +120,7 @@ aws sns list-subscriptions | grep Confirmed
 ---
 
 ### **Step 4: Access OpenSearch** (2 minutes)
+
 ```bash
 # Get dashboard URL
 terraform output opensearch_dashboard_endpoint
@@ -123,12 +133,14 @@ aws secretsmanager get-secret-value \
 ```
 
 **Login to OpenSearch Dashboards:**
+
 - Username: `admin`
 - Password: (from command above)
 
 ---
 
 ### **Step 5: Run Glue Crawler** (5-10 minutes)
+
 ```bash
 # Start crawler to catalog Security Lake data
 aws glue start-crawler --name security-lake-crawler
@@ -143,7 +155,7 @@ aws glue get-crawler --name security-lake-crawler --query 'Crawler.State'
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                    WORKLOAD ACCOUNT (290793900072)                │
+│                    WORKLOAD ACCOUNT (555555666666)                │
 │                                                                    │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐     │
 │  │CloudTrail│  │VPC Flow  │  │GuardDuty │  │Security Hub │     │
@@ -156,11 +168,11 @@ aws glue get-crawler --name security-lake-crawler --query 'Crawler.State'
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                    SECURITY ACCOUNT (404068503087)                │
+│                    SECURITY ACCOUNT (333333444444)                │
 │                                                                    │
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │                 AWS SECURITY LAKE                           │  │
-│  │  S3: aws-security-data-lake-us-east-1-404068503087        │  │
+│  │  S3: aws-security-data-lake-us-east-1-333333444444        │  │
 │  │  Format: OCSF (Parquet files)                             │  │
 │  │  Partitioned by: date / source                            │  │
 │  └────────────────────┬───────────────────────────────────────┘  │
@@ -192,6 +204,7 @@ aws glue get-crawler --name security-lake-crawler --query 'Crawler.State'
 ## 🎯 **What I Can Do Right Now**
 
 ### **1. Query with Athena**
+
 ```sql
 -- Show all Security Lake tables
 SHOW TABLES IN amazon_security_lake_glue_db_us_east_1;
@@ -217,12 +230,14 @@ GROUP BY 1, 2 ORDER BY blocks DESC;
 ```
 
 ### **2. Create OpenSearch Dashboards**
+
 - Security Overview (severity distribution, top threats)
 - Network Traffic Analysis (bandwidth, top talkers, protocols)
 - CloudTrail Audit (API calls by user, high-risk operations)
 - GuardDuty Findings (geographic map, timeline)
 
 ### **3. Set Up Alerts**
+
 - High severity GuardDuty findings
 - Unusual API calls (100+ calls/min)
 - Failed authentication attempts (10+ failures/min)
@@ -235,19 +250,20 @@ GROUP BY 1, 2 ORDER BY blocks DESC;
 
 **Monthly Costs for Unified Deployment (1TB logs/month):**
 
-| Component | Details | Cost/Month |
-|-----------|---------|------------|
-| **Security Lake** | 1TB storage + lifecycle | $25 |
-| **Glue Crawler** | 6 runs/day × 30 days | $2 |
-| **Athena** | ~100GB scanned/month | $5 |
-| **OpenSearch** | 1× t3.medium.search | $60 |
-| **OpenSearch EBS** | 100GB gp3 | $15 |
-| **SNS Topics** | 3 topics + emails | $1 |
-| **Secrets Manager** | 1 secret | $0.40 |
-| **CloudWatch Logs** | 5GB/month | $2.50 |
-| **Total** | | **~$111/month** |
+| Component           | Details                 | Cost/Month      |
+| ------------------- | ----------------------- | --------------- |
+| **Security Lake**   | 1TB storage + lifecycle | $25             |
+| **Glue Crawler**    | 6 runs/day × 30 days    | $2              |
+| **Athena**          | ~100GB scanned/month    | $5              |
+| **OpenSearch**      | 1× t3.medium.search     | $60             |
+| **OpenSearch EBS**  | 100GB gp3               | $15             |
+| **SNS Topics**      | 3 topics + emails       | $1              |
+| **Secrets Manager** | 1 secret                | $0.40           |
+| **CloudWatch Logs** | 5GB/month               | $2.50           |
+| **Total**           |                         | **~$111/month** |
 
 **Cost Optimizations:**
+
 - **Current setup:** t3.medium (1 node) = **$111/mo** ✅ Most cost-effective
 - **Better performance:** r6g.xlarge (1 node) = **$316/mo** (+185%)
 - **Production HA:** r6g.xlarge (3 nodes) = **$876/mo** (+690%)
@@ -258,12 +274,14 @@ GROUP BY 1, 2 ORDER BY blocks DESC;
 ## ✅ **Pre-Deployment Checklist**
 
 ### **Before You Start:**
+
 - [ ] AWS CLI configured with security account credentials
 - [ ] Terraform >= 1.5.0 installed
 - [ ] Account IDs configured in `backend-bootstrap/terraform.tfvars`
 - [ ] Understand ~$111/month cost (t3.medium OpenSearch, optimized for dev/test)
 
 ### **Post-Deployment Validation:**
+
 - [ ] All 85+ resources deployed: `terraform state list | wc -l`
 - [ ] Security Lake deployed: `aws securitylake list-data-lakes`
 - [ ] Log sources enabled: `aws securitylake list-log-sources`
@@ -289,7 +307,7 @@ aws securitylake list-data-lakes
 aws securitylake list-log-sources
 
 # 3. Check S3 bucket
-aws s3 ls s3://aws-security-data-lake-us-east-1-404068503087/ext/
+aws s3 ls s3://aws-security-data-lake-us-east-1-333333444444/ext/
 
 # 4. Check Glue database
 aws glue get-database --name amazon_security_lake_glue_db_us_east_1
@@ -319,16 +337,16 @@ aws secretsmanager get-secret-value \
 
 ## 📚 **Documentation Map**
 
-| File | When to Use |
-|------|-------------|
-| **[UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md)** ⭐ | Complete step-by-step deployment guide |
-| **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** ⭐ | One-page command reference |
-| **[README.md](./README.md)** | Master documentation index |
-| **[IMPLEMENTATION-COMPLETE.md](./IMPLEMENTATION-COMPLETE.md)** | What's deployed and architecture overview |
-| **[README-SECURITY-LAKE.md](./README-SECURITY-LAKE.md)** | Security Lake features and common queries |
-| **[OPENSEARCH-SNS-SETUP.md](./OPENSEARCH-SNS-SETUP.md)** | OpenSearch SNS integration guide |
-| **[SECURITY-LAKE-DEPLOYMENT.md](./SECURITY-LAKE-DEPLOYMENT.md)** | Detailed deployment guide |
-| **[soc-alerting/MONITOR-STATUS-SUMMARY.md](./soc-alerting/MONITOR-STATUS-SUMMARY.md)** | Monitor deployment checklist |
+| File                                                                                   | When to Use                               |
+| -------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **[UNIFIED-DEPLOYMENT-GUIDE.md](./UNIFIED-DEPLOYMENT-GUIDE.md)** ⭐                    | Complete step-by-step deployment guide    |
+| **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** ⭐                                      | One-page command reference                |
+| **[README.md](./README.md)**                                                           | Master documentation index                |
+| **[IMPLEMENTATION-COMPLETE.md](./IMPLEMENTATION-COMPLETE.md)**                         | What's deployed and architecture overview |
+| **[README-SECURITY-LAKE.md](./README-SECURITY-LAKE.md)**                               | Security Lake features and common queries |
+| **[OPENSEARCH-SNS-SETUP.md](./OPENSEARCH-SNS-SETUP.md)**                               | OpenSearch SNS integration guide          |
+| **[SECURITY-LAKE-DEPLOYMENT.md](./SECURITY-LAKE-DEPLOYMENT.md)**                       | Detailed deployment guide                 |
+| **[soc-alerting/MONITOR-STATUS-SUMMARY.md](./soc-alerting/MONITOR-STATUS-SUMMARY.md)** | Monitor deployment checklist              |
 
 ---
 
@@ -343,32 +361,35 @@ aws secretsmanager get-secret-value \
 
 ## 🚦 **Status**
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Unified Deployment | ✅ Complete | Single command deployment |
-| Security Lake | ✅ Complete | Auto AWS log ingestion |
-| OpenSearch | ✅ Complete | t3.medium (cost optimized) |
-| Athena Queries | ✅ Complete | 7 queries + 4 views |
-| SNS Alerting | ✅ Complete | 3 severity levels |
-| Glue Crawler | ✅ Complete | Auto-runs every 6h |
-| Documentation | ✅ Complete | 8 comprehensive guides |
-| Cost Analysis | ✅ Complete | ~$111/mo (t3.medium) |
+| Component          | Status      | Notes                      |
+| ------------------ | ----------- | -------------------------- |
+| Unified Deployment | ✅ Complete | Single command deployment  |
+| Security Lake      | ✅ Complete | Auto AWS log ingestion     |
+| OpenSearch         | ✅ Complete | t3.medium (cost optimized) |
+| Athena Queries     | ✅ Complete | 7 queries + 4 views        |
+| SNS Alerting       | ✅ Complete | 3 severity levels          |
+| Glue Crawler       | ✅ Complete | Auto-runs every 6h         |
+| Documentation      | ✅ Complete | 8 comprehensive guides     |
+| Cost Analysis      | ✅ Complete | ~$111/mo (t3.medium)       |
 
 ---
 
 ## 🎉 **Next Steps**
 
 ### **Today (30 minutes):**
+
 1. ✅ Configure variables in `backend-bootstrap/terraform.tfvars`
 2. ✅ Deploy everything: `cd backend-bootstrap && terraform apply`
 3. ✅ Confirm SNS email subscriptions (check email)
 4. ✅ Access OpenSearch Dashboards
 
 ### **Wait (1-2 hours):**
+
 - Security Lake ingests initial data
 - Glue Crawler catalogs metadata
 
 ### **Tomorrow:**
+
 5. ✅ Run test queries in Athena
 6. ⏳ Create OpenSearch destinations for monitoring
 7. ⏳ Upload OpenSearch monitors: `cd soc-alerting/monitors && ./deploy-monitors.sh`

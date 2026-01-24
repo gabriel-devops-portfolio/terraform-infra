@@ -9,16 +9,18 @@ Centralized Egress, Zero-Trust Workload VPCs, and Mandatory Inspection
 This network design implements a hub-and-spoke, zero-trust AWS networking model suitable for regulated environments such as banking, fintech, and SaaS platforms handling sensitive data.
 
 Core Design Principles
-	•	No direct internet access from workloads
-	•	Mandatory, centralized egress inspection
-	•	Fail-close security posture
-	•	Least-privilege network access
-	•	Private-by-default service consumption
-	•	Auditability and forensic readiness
+• No direct internet access from workloads
+• Mandatory, centralized egress inspection
+• Fail-close security posture
+• Least-privilege network access
+• Private-by-default service consumption
+• Auditability and forensic readiness
 
 ⸻
 
 2. High-Level Architecture
+
+![Networking Architecture](./networking-architecture.png)
 
                     ┌────────────────────────┐
                     │        Internet        │
@@ -46,7 +48,6 @@ Core Design Principles
                     │ (EKS, RDS, Services)   │
                     └────────────────────────┘
 
-
 ⸻
 
 3. Workload VPC (Spoke)
@@ -62,12 +63,12 @@ Key Decisions
 create_igw = false
 
 Why
-	•	Prevents any accidental public exposure
-	•	Eliminates direct egress paths
-	•	Forces all outbound traffic through inspection
+• Prevents any accidental public exposure
+• Eliminates direct egress paths
+• Forces all outbound traffic through inspection
 
 Trade-off
-	•	Requires additional infrastructure (TGW + Egress VPC)
+• Requires additional infrastructure (TGW + Egress VPC)
 
 ⸻
 
@@ -76,12 +77,12 @@ Trade-off
 enable_nat_gateway = false
 
 Why
-	•	NAT inside workload VPCs is a common bypass vector
-	•	Centralizing NAT ensures uniform security controls
+• NAT inside workload VPCs is a common bypass vector
+• Centralizing NAT ensures uniform security controls
 
 Trade-off
-	•	Higher latency compared to local NAT
-	•	Acceptable in exchange for security guarantees
+• Higher latency compared to local NAT
+• Acceptable in exchange for security guarantees
 
 ⸻
 
@@ -90,8 +91,8 @@ Trade-off
 private_subnets = [...]
 
 Why
-	•	Enforces zero-trust networking
-	•	Aligns with regulatory expectations (PCI, SOC2, ISO)
+• Enforces zero-trust networking
+• Aligns with regulatory expectations (PCI, SOC2, ISO)
 
 ⸻
 
@@ -100,27 +101,27 @@ Why
 Interface Endpoints (AWS Services)
 
 Services such as:
-	•	ECR
-	•	STS
-	•	Logs
-	•	SSM
-	•	EKS
-	•	ELB / Auto Scaling
-	•	SNS / SQS
+• ECR
+• STS
+• Logs
+• SSM
+• EKS
+• ELB / Auto Scaling
+• SNS / SQS
 
 are accessed without touching the public internet.
 
-vpc_endpoint_type   = "Interface"
+vpc_endpoint_type = "Interface"
 private_dns_enabled = true
 
 Why
-	•	Prevents data exfiltration via public endpoints
-	•	Reduces attack surface
-	•	Improves reliability
+• Prevents data exfiltration via public endpoints
+• Reduces attack surface
+• Improves reliability
 
 Trade-off
-	•	Higher cost per endpoint
-	•	Additional operational complexity
+• Higher cost per endpoint
+• Additional operational complexity
 
 ⸻
 
@@ -129,11 +130,11 @@ Secrets Manager & KMS (Strict Policies)
 Endpoints enforce deny-by-default with explicit IRSA role allow-listing.
 
 Why
-	•	IAM alone does not protect against network-level abuse
-	•	VPC Endpoint policies add a second enforcement layer
+• IAM alone does not protect against network-level abuse
+• VPC Endpoint policies add a second enforcement layer
 
 Security Benefit
-	•	Even compromised workloads cannot access secrets unless identity AND network policy match
+• Even compromised workloads cannot access secrets unless identity AND network policy match
 
 ⸻
 
@@ -142,12 +143,12 @@ S3 Gateway Endpoint
 vpc_endpoint_type = "Gateway"
 
 Why
-	•	Gateway endpoints are cheaper and scale better for S3
-	•	Used with restrictive bucket policies
+• Gateway endpoints are cheaper and scale better for S3
+• Used with restrictive bucket policies
 
 Trade-off
-	•	Less granular than interface endpoints
-	•	Acceptable for S3’s access model
+• Less granular than interface endpoints
+• Acceptable for S3’s access model
 
 ⸻
 
@@ -156,9 +157,9 @@ Trade-off
 Purpose
 
 The Egress VPC is the only place in the environment allowed to:
-	•	Access the internet
-	•	Perform NAT
-	•	Perform deep packet inspection
+• Access the internet
+• Perform NAT
+• Perform deep packet inspection
 
 ⸻
 
@@ -167,12 +168,12 @@ NAT Gateways (Per AZ)
 one_nat_gateway_per_az = true
 
 Why
-	•	Prevents cross-AZ traffic charges
-	•	Ensures AZ fault isolation
+• Prevents cross-AZ traffic charges
+• Ensures AZ fault isolation
 
 Trade-off
-	•	Higher cost than single NAT
-	•	Required for enterprise availability
+• Higher cost than single NAT
+• Required for enterprise availability
 
 ⸻
 
@@ -184,22 +185,22 @@ generated_rules_type = "ALLOWLIST"
 stateful_default_actions = ["aws:drop_strict"]
 
 Why
-	•	Zero-trust egress
-	•	Only explicitly approved domains are reachable
-	•	Prevents malware C2, data exfiltration, and supply-chain attacks
+• Zero-trust egress
+• Only explicitly approved domains are reachable
+• Prevents malware C2, data exfiltration, and supply-chain attacks
 
 Trade-off
-	•	Requires maintenance of allowlist
-	•	Intentional operational friction for security
+• Requires maintenance of allowlist
+• Intentional operational friction for security
 
 ⸻
 
 6. Transit Gateway (Central Control Plane)
 
 Why Transit Gateway?
-	•	Scales better than VPC peering
-	•	Enforces centralized routing policy
-	•	Required for inspection architectures
+• Scales better than VPC peering
+• Enforces centralized routing policy
+• Required for inspection architectures
 
 ⸻
 
@@ -208,12 +209,12 @@ Appliance Mode Enabled
 appliance_mode_support = "enable"
 
 Why
-	•	Preserves symmetric routing
-	•	Required for stateful firewalls
+• Preserves symmetric routing
+• Required for stateful firewalls
 
 Without this
-	•	Return traffic bypasses firewall
-	•	Connections break unpredictably
+• Return traffic bypasses firewall
+• Connections break unpredictably
 
 ⸻
 
@@ -232,8 +233,8 @@ There is no alternate path.
 aws_route (intra_subnet) → vpc_endpoint_id (firewall)
 
 Why this matters
-	•	TGW alone does not enforce firewall usage
-	•	Explicit routing to firewall endpoints prevents bypass
+• TGW alone does not enforce firewall usage
+• Explicit routing to firewall endpoints prevents bypass
 
 This is a critical enterprise-grade control.
 
@@ -246,14 +247,14 @@ Problem
 What happens if the firewall becomes unhealthy?
 
 Solution
-	•	Lambda continuously monitors firewall health
-	•	TGW routes are dynamically switched to:
-	•	Blackhole (fail-close)
-	•	OR restored to egress attachment
+• Lambda continuously monitors firewall health
+• TGW routes are dynamically switched to:
+• Blackhole (fail-close)
+• OR restored to egress attachment
 
 Why
-	•	Fail-open is unacceptable in regulated environments
-	•	Outage > data breach
+• Fail-open is unacceptable in regulated environments
+• Outage > data breach
 
 ⸻
 
@@ -262,30 +263,29 @@ Why
 VPC Flow Logs
 
 Enabled on:
-	•	Workload VPC
-	•	Egress VPC
+• Workload VPC
+• Egress VPC
 
 Why
-	•	Required for forensic analysis
-	•	Feeds Security Lake / OpenSearch / Athena
+• Required for forensic analysis
+• Feeds Security Lake / OpenSearch / Athena
 
 ⸻
 
 EventBridge + Lambda
-	•	Firewall health monitoring
-	•	Automated remediation
+• Firewall health monitoring
+• Automated remediation
 
 ⸻
 
 10. Security Trade-offs Summary
 
-Decision	Advantage	Trade-off
-No NAT in workloads	Zero bypass risk	Higher latency
-Central egress	Uniform control	Added complexity
-Strict firewall allowlist	Strong security	Maintenance overhead
-Interface endpoints	No internet exposure	Cost
-Fail-close routing	Compliance-grade	Possible outages
-
+Decision Advantage Trade-off
+No NAT in workloads Zero bypass risk Higher latency
+Central egress Uniform control Added complexity
+Strict firewall allowlist Strong security Maintenance overhead
+Interface endpoints No internet exposure Cost
+Fail-close routing Compliance-grade Possible outages
 
 ⸻
 
@@ -304,4 +304,3 @@ Fail-close routing	Compliance-grade	Possible outages
 
 “I designed the network assuming compromise is inevitable.
 The goal is to ensure no workload can ever exfiltrate data or access secrets without explicit identity, network, and inspection approval — and that failure always defaults to secure.”
-

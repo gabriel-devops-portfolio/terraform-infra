@@ -6,7 +6,7 @@
 
 ## 📋 Executive Summary
 
-Your networking module implements a **secure, enterprise-grade hub-and-spoke architecture** with:
+My networking module implements a **secure, enterprise-grade hub-and-spoke architecture** with:
 - ✅ Centralized egress inspection via AWS Network Firewall
 - ✅ Zero-trust workload isolation
 - ✅ Fail-close security posture
@@ -202,8 +202,8 @@ resource "aws_route" "igw_to_firewall" {
 
 ### 4. ✅ **Fixed TGW Subnet References**
 ```hcl
-subnet_ids = slice(module.egress_vpc.intra_subnets, 
-                   length(var.firewall_subnets), 
+subnet_ids = slice(module.egress_vpc.intra_subnets,
+                   length(var.firewall_subnets),
                    length(module.egress_vpc.intra_subnets))
 ```
 **Why**: Properly separates firewall and TGW subnets from intra_subnets
@@ -267,7 +267,7 @@ Before deploying, ensure you have:
 
 - [ ] **VPC CIDR ranges** planned (no overlaps)
 - [ ] **Availability Zones** selected (recommend 3)
-- [ ] **Firewall allowlist** updated for your specific services
+- [ ] **Firewall allowlist** updated for My specific services
 - [ ] **Subnet sizing** confirmed:
   - Workload private: `/20` or larger (4096 IPs)
   - Firewall subnets: `/28` minimum (per AWS requirement)
@@ -306,13 +306,13 @@ aws logs tail /aws/networkfirewall/prod-egress-firewall --follow
 
 ## 🎓 Best Practices Implemented
 
-✅ **Separation of Concerns**: Hub (egress) vs Spoke (workload)  
-✅ **Defense in Depth**: Multiple layers (NACLs, SGs, Firewall, IAM)  
-✅ **Least Privilege**: Restrictive VPC endpoint policies  
-✅ **Immutable Infrastructure**: Protected firewall configuration  
-✅ **Audit Trail**: Flow logs, firewall logs  
-✅ **High Availability**: Multi-AZ design  
-✅ **Scalability**: Can add multiple workload VPCs to same hub  
+✅ **Separation of Concerns**: Hub (egress) vs Spoke (workload)
+✅ **Defense in Depth**: Multiple layers (NACLs, SGs, Firewall, IAM)
+✅ **Least Privilege**: Restrictive VPC endpoint policies
+✅ **Immutable Infrastructure**: Protected firewall configuration
+✅ **Audit Trail**: Flow logs, firewall logs
+✅ **High Availability**: Multi-AZ design
+✅ **Scalability**: Can add multiple workload VPCs to same hub
 
 ---
 
@@ -358,7 +358,7 @@ Restrict each VPC endpoint to only necessary actions (currently only S3, Secrets
 
 ## 🎉 Summary
 
-**Your networking module is now PRODUCTION-READY** for enterprise deployments! ✅
+**My networking module is now PRODUCTION-READY** for enterprise deployments! ✅
 
 **Key Strengths**:
 - ✅ Zero-trust architecture
@@ -374,7 +374,6 @@ Restrict each VPC endpoint to only necessary actions (currently only S3, Secrets
 
 ---
 
-**Architecture Grade**: ⭐⭐⭐⭐⭐ (5/5)  
-**Security Posture**: 🛡️ **EXCELLENT**  
+**Architecture Grade**: ⭐⭐⭐⭐⭐ (5/5)
+**Security Posture**: 🛡️ **EXCELLENT**
 **Deployment Readiness**: ✅ **READY**
-

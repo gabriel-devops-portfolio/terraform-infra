@@ -29,6 +29,7 @@ module "eks-cluster" {
   cluster_endpoint_public_access_cidrs       = var.cluster_endpoint_public_access_cidrs
   node_security_group_tags = {
     "kubernetes.io/cluster/${var.eks_cluster_name}" = var.eks_cluster_name
+    "karpenter.sh/discovery"                        = var.eks_cluster_name
   }
 }
 
@@ -41,21 +42,99 @@ resource "aws_iam_role" "eks_full_access" {
   path = "/"
 
   assume_role_policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Effect": "Allow",
-            "Principal": {
-               "AWS": [
-                  "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-                ]
-            }
-        }
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+                  ]
+              }
+          }
+      ]
+    }
+  EOF
+}
+
+module "karpenter_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.0"
+
+  role_name = "pilotgab-prod-Karpenter-IRSA"
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks-cluster.oidc_provider_arn
+      namespace_service_accounts = ["karpenter:karpenter"]
+    }
+  }
+
+  role_policy_arns = {
+    policy = aws_iam_policy.karpenter_controller.arn
+  }
+
+  tags = var.tags
+}
+
+resource "aws_iam_policy" "karpenter_controller" {
+  name        = "pilotgab-prod-KarpenterControllerPolicy"
+  description = "Policy for Karpenter controller"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateFleet",
+          "ec2:CreateLaunchTemplate",
+          "ec2:CreateTags",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeImages",
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceTypeOfferings",
+          "ec2:DescribeInstanceTypes",
+          "ec2:DescribeLaunchTemplates",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSpotPriceHistory",
+          "ec2:DescribeSubnets",
+          "ec2:DeleteLaunchTemplate",
+          "ec2:RunInstances",
+          "ec2:TerminateInstances"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole"
+        ]
+        Resource = module.eks-cluster.eks_managed_node_groups["internal"].iam_role_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "eks:DescribeCluster"
+        ]
+        Resource = module.eks-cluster.cluster_arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "pricing:GetProducts"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = "arn:aws:ssm:us-east-1::parameter/aws/service/*"
+      }
     ]
+  })
 }
-EOF
-}
-
-
