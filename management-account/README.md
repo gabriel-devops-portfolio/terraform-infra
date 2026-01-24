@@ -6,6 +6,8 @@ This directory contains the Terraform configuration for the AWS Management Accou
 
 The management account establishes a multi-account AWS environment with the following structure:
 
+![AWS management Architecture](./organization-architecture.png)
+
 ```
 AWS Organization (Root)
 ├── Management Account (This account)
