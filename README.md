@@ -159,8 +159,8 @@ terraform-infra/
 
 ### Accounts
 
-| Account Type   | Account ID   | Purpose               | Key Services                               |
-| -------------- | ------------ | --------------------- | ------------------------------------------ |
+| Account Type         | Account ID   | Purpose               | Key Services                               |
+| -------------------- | ------------ | --------------------- | ------------------------------------------ |
 | **Management** | Root         | Organization admin    | AWS Organizations, SCPs                    |
 | **Security**   | 333333444444 | Security & compliance | CloudTrail, GuardDuty, SecurityHub, Config |
 | **Workload**   | 555555666666 | Application runtime   | EKS, RDS, VPC, ArgoCD                      |
@@ -269,8 +269,8 @@ Mirrors production architecture with scaled-down resources for testing:
 
 Reusable, production-ready infrastructure modules:
 
-| Module       | Purpose                    | Key Resources                               |
-| ------------ | -------------------------- | ------------------------------------------- |
+| Module         | Purpose                    | Key Resources                               |
+| -------------- | -------------------------- | ------------------------------------------- |
 | `networking` | Hub-spoke VPC architecture | VPC, TGW, NAT, subnets, route tables        |
 | `eks`        | EKS cluster setup          | EKS cluster, node groups, add-ons, OIDC     |
 | `data`       | Data persistence layer     | RDS, S3, security groups, backup policies   |
@@ -335,50 +335,50 @@ All security data normalized to Open Cybersecurity Schema Framework (OCSF) forma
 
 ### Infrastructure ✅
 
-- [x] Multi-account AWS Organization deployed
-- [x] Service Control Policies (SCPs) applied
-- [x] Cross-account IAM roles configured
-- [x] Remote state backend with encryption and locking
-- [x] Hub-and-spoke network topology with Transit Gateway
-- [x] EKS cluster with managed node groups
-- [x] RDS Multi-AZ with automated backups
-- [x] KMS encryption for all data at rest
+- [X] Multi-account AWS Organization deployed
+- [X] Service Control Policies (SCPs) applied
+- [X] Cross-account IAM roles configured
+- [X] Remote state backend with encryption and locking
+- [X] Hub-and-spoke network topology with Transit Gateway
+- [X] EKS cluster with managed node groups
+- [X] RDS Multi-AZ with automated backups
+- [X] KMS encryption for all data at rest
 
 ### Security ✅
 
-- [x] Root account protected with production-grade SCP
-- [x] MFA enforced for production operations
-- [x] CloudTrail logging to centralized security account
-- [x] GuardDuty enabled across all accounts
-- [x] SecurityHub compliance monitoring
-- [x] AWS Config drift detection
-- [x] VPC Flow Logs enabled and centralized
-- [x] Security Lake for OCSF data aggregation (365-day retention)
-- [x] Security Lake Subscriber for OpenSearch (OCSF S3 access)
-- [x] OpenSearch for real-time OCSF log analysis
-- [x] Athena for SQL-based OCSF queries (11 pre-built queries)
-- [x] Multi-source correlation queries (VPC + CloudTrail + Security Hub)
-- [x] SOC alerting with SNS/SQS
+- [X] Root account protected with production-grade SCP
+- [X] MFA enforced for production operations
+- [X] CloudTrail logging to centralized security account
+- [X] GuardDuty enabled across all accounts
+- [X] SecurityHub compliance monitoring
+- [X] AWS Config drift detection
+- [X] VPC Flow Logs enabled and centralized
+- [X] Security Lake for OCSF data aggregation (365-day retention)
+- [X] Security Lake Subscriber for OpenSearch (OCSF S3 access)
+- [X] OpenSearch for real-time OCSF log analysis
+- [X] Athena for SQL-based OCSF queries (11 pre-built queries)
+- [X] Multi-source correlation queries (VPC + CloudTrail + Security Hub)
+- [X] SOC alerting with SNS/SQS
 
 ### Monitoring ✅
 
-- [x] CloudWatch dashboards for EKS, RDS, VPC
-- [x] CloudWatch alarms for critical metrics
-- [x] GuardDuty high-severity alert routing
-- [x] SecurityHub critical finding notifications
-- [x] Config compliance violation alerts
-- [x] DLQ monitoring for alert delivery
-- [x] OpenSearch dashboards for security insights
+- [X] CloudWatch dashboards for EKS, RDS, VPC
+- [X] CloudWatch alarms for critical metrics
+- [X] GuardDuty high-severity alert routing
+- [X] SecurityHub critical finding notifications
+- [X] Config compliance violation alerts
+- [X] DLQ monitoring for alert delivery
+- [X] OpenSearch dashboards for security insights
 
 ### Documentation ✅
 
-- [x] Architecture diagrams
-- [x] Deployment procedures
-- [x] Runbooks for incident response
-- [x] Root account SCP comprehensive guide
-- [x] Cross-account access documentation
-- [x] Module dependency documentation
-- [x] Security detection playbooks
+- [X] Architecture diagrams
+- [X] Deployment procedures
+- [X] Runbooks for incident response
+- [X] Root account SCP comprehensive guide
+- [X] Cross-account access documentation
+- [X] Module dependency documentation
+- [X] Security detection playbooks
 
 ---
 
@@ -523,23 +523,23 @@ aws s3 cp test.txt s3://cloudtrail-logs-333333444444/  # Should deny
 
 ### Monthly Cost Estimates
 
-| Service                  | Configuration             | Estimated Cost    |
-| ------------------------ | ------------------------- | ----------------- |
-| EKS Cluster              | 1 cluster                 | $73/month         |
-| EC2 (EKS nodes)          | 3x t3.medium              | $90/month         |
-| RDS PostgreSQL           | db.t3.medium Multi-AZ     | $120/month        |
-| S3 (logs, backups)       | 500 GB standard           | $12/month         |
-| CloudTrail               | Organization trail        | $5/month          |
-| GuardDuty                | 1 account                 | $30/month         |
-| Security Lake            | 1TB OCSF data + lifecycle | $25/month         |
-| Security Lake Subscriber | OpenSearch access         | $1/month          |
-| OpenSearch               | 3x r6g.xlarge nodes       | $750/month        |
-| OpenSearch EBS           | 3x 200GB gp3              | $90/month         |
-| Athena                   | ~100GB OCSF queries       | $5/month          |
-| Glue Crawler             | 6 runs/day                | $2/month          |
-| NAT Gateway              | 1 gateway                 | $35/month         |
-| Transit Gateway          | 2 attachments             | $70/month         |
-| **Total (Production)**   |                           | **~$1,308/month** |
+| Service                      | Configuration             | Estimated Cost          |
+| ---------------------------- | ------------------------- | ----------------------- |
+| EKS Cluster                  | 1 cluster                 | $73/month               |
+| EC2 (EKS nodes)              | 3x t3.medium              | $90/month               |
+| RDS PostgreSQL               | db.t3.medium Multi-AZ     | $120/month              |
+| S3 (logs, backups)           | 500 GB standard           | $12/month               |
+| CloudTrail                   | Organization trail        | $5/month                |
+| GuardDuty                    | 1 account                 | $30/month               |
+| Security Lake                | 1TB OCSF data + lifecycle | $25/month               |
+| Security Lake Subscriber     | OpenSearch access         | $1/month                |
+| OpenSearch                   | 3x r6g.xlarge nodes       | $750/month              |
+| OpenSearch EBS               | 3x 200GB gp3              | $90/month               |
+| Athena                       | ~100GB OCSF queries       | $5/month                |
+| Glue Crawler                 | 6 runs/day                | $2/month                |
+| NAT Gateway                  | 1 gateway                 | $35/month               |
+| Transit Gateway              | 2 attachments             | $70/month               |
+| **Total (Production)** |                           | **~$1,308/month** |
 
 _Note: Security Lake + OpenSearch add ~$873/month for centralized OCSF analytics_
 
